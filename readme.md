@@ -4,7 +4,7 @@ A very lightweight **write only** Node.js ORM for Microsoft SQL Server.
 
 ## Write Only?
 
-The features in this module are for **writing graphs of related entities**. Querying, on the other hand, is done with raw SQL so you can do it fast.
+The features in this module are mostly for **writing graphs of related entities**. Querying, on the other hand, is done with raw SQL so you can do it fast. See the [query API](#queries) for details.
 
 Why ORMs shouldn't support querying:
 
@@ -89,9 +89,9 @@ For connection options, see [node-mssql Configuration](https://github.com/patrik
   * `log` (`false`) whether to log SQL statements, for debugging
   * `foreignKeyFor` a function that returns a foreign key field name for a member, defaults to:
 
-    function foreignKeyFor(fieldName) {
-      return fieldName + 'Id';
-    }
+        function foreignKeyFor(fieldName) {
+          return fieldName + 'Id';
+        }
 
 `createEntity` is a function that can be used to create entities from the model.
 
@@ -184,7 +184,7 @@ In SQL:
 
 ### One to Many
 
-When entity A contains a field that is an array that contains entity B and C. Then entity A will be saved first, followed by all entities B and C.
+When entity A contains a field that is an array that contains entities B and C. Then entity A will be saved first, followed by all entities B and C.
 
 This allows entities B and C to refer to entity A, as they would in their tables.
 
