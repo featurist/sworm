@@ -65,7 +65,7 @@
         return prototype(prototype(p.prototype)(obj));
     };
     var self = this;
-    var sql, crypto, rowBase, option, toSql;
+    var sql, crypto, rowBase, option;
     sql = require("mssql");
     crypto = require("crypto");
     rowBase = function() {
@@ -118,21 +118,21 @@
             }
         };
         insert = function(obj) {
-            var keys, fields, values, request, outputId, statementString, gen9_asyncResult, r;
-            return new Promise(function(gen10_onFulfilled) {
+            var keys, fields, values, request, outputId, gen9_items, gen10_i, name, statementString, gen11_asyncResult, r;
+            return new Promise(function(gen12_onFulfilled) {
                 keys = fieldsForObject(obj);
                 fields = keys.join(", ");
                 values = function() {
-                    var gen11_results, gen12_items, gen13_i, key;
-                    gen11_results = [];
-                    gen12_items = keys;
-                    for (gen13_i = 0; gen13_i < gen12_items.length; ++gen13_i) {
-                        key = gen12_items[gen13_i];
+                    var gen13_results, gen14_items, gen15_i, key;
+                    gen13_results = [];
+                    gen14_items = keys;
+                    for (gen15_i = 0; gen15_i < gen14_items.length; ++gen15_i) {
+                        key = gen14_items[gen15_i];
                         (function(key) {
-                            return gen11_results.push(toSql(obj[key]));
+                            return gen13_results.push("@" + key);
                         })(key);
                     }
-                    return gen11_results;
+                    return gen13_results;
                 }().join(", ");
                 request = new sql.Request(obj._meta.db.connection);
                 outputId = function() {
@@ -142,12 +142,17 @@
                         return "";
                     }
                 }();
+                gen9_items = keys;
+                for (gen10_i = 0; gen10_i < gen9_items.length; ++gen10_i) {
+                    name = gen9_items[gen10_i];
+                    request.input(name, obj[name]);
+                }
                 statementString = "insert into " + obj._meta.table + " (" + fields + ") " + outputId + " values (" + values + ")";
                 logSql(obj, statementString);
-                gen10_onFulfilled(gen1_promisify(function(gen14_callback) {
-                    return request.query(statementString, gen14_callback);
-                }).then(function(gen9_asyncResult) {
-                    r = gen9_asyncResult;
+                gen12_onFulfilled(gen1_promisify(function(gen16_callback) {
+                    return request.query(statementString, gen16_callback);
+                }).then(function(gen11_asyncResult) {
+                    r = gen11_asyncResult;
                     obj.setSaved();
                     if (!obj._meta.compoundKey) {
                         obj[obj._meta.id] = r[0][obj._meta.id];
@@ -157,63 +162,74 @@
             });
         };
         update = function(obj) {
-            var keys, assignments, whereClause, request, statementString, gen15_asyncResult;
-            return new Promise(function(gen10_onFulfilled) {
+            var keys, assignments, request, gen17_items, gen18_i, n, gen19_items, gen20_i, name, whereClause, statementString, gen21_asyncResult;
+            return new Promise(function(gen12_onFulfilled) {
                 keys = fieldsForObject(obj);
                 assignments = function() {
-                    var gen16_results, gen17_items, gen18_i, key;
-                    gen16_results = [];
-                    gen17_items = keys;
-                    for (gen18_i = 0; gen18_i < gen17_items.length; ++gen18_i) {
-                        key = gen17_items[gen18_i];
+                    var gen22_results, gen23_items, gen24_i, key;
+                    gen22_results = [];
+                    gen23_items = keys;
+                    for (gen24_i = 0; gen24_i < gen23_items.length; ++gen24_i) {
+                        key = gen23_items[gen24_i];
                         (function(key) {
-                            var sqlValue;
                             if (key !== obj._meta.id) {
-                                sqlValue = toSql(obj[key]);
-                                return gen16_results.push(key + " = " + sqlValue);
+                                return gen22_results.push(key + " = @" + key);
                             }
                         })(key);
                     }
-                    return gen16_results;
+                    return gen22_results;
                 }().join(", ");
+                request = new sql.Request(obj._meta.db.connection);
+                gen17_items = keys;
+                for (gen18_i = 0; gen18_i < gen17_items.length; ++gen18_i) {
+                    n = gen17_items[gen18_i];
+                    if (n !== obj._meta.id) {
+                        request.input(n, obj[n]);
+                    }
+                }
                 whereClause = function() {
                     if (obj._meta.compoundKey) {
+                        gen19_items = obj._meta.compoundKey;
+                        for (gen20_i = 0; gen20_i < gen19_items.length; ++gen20_i) {
+                            name = gen19_items[gen20_i];
+                            request.input(name, obj[name]);
+                        }
                         return function() {
-                            var gen19_results, gen20_items, gen21_i, key;
-                            gen19_results = [];
-                            gen20_items = obj._meta.id;
-                            for (gen21_i = 0; gen21_i < gen20_items.length; ++gen21_i) {
-                                key = gen20_items[gen21_i];
+                            var gen25_results, gen26_items, gen27_i, key;
+                            gen25_results = [];
+                            gen26_items = obj._meta.id;
+                            for (gen27_i = 0; gen27_i < gen26_items.length; ++gen27_i) {
+                                key = gen26_items[gen27_i];
                                 (function(key) {
-                                    return gen19_results.push(key + " = " + toSql(obj[key]));
+                                    return gen25_results.push(key + " = @" + key);
                                 })(key);
                             }
-                            return gen19_results;
+                            return gen25_results;
                         }().join(" and ");
                     } else {
-                        return obj._meta.id + " = " + toSql(obj.identity());
+                        request.input(obj._meta.id, obj.identity());
+                        return obj._meta.id + " = @" + obj._meta.id;
                     }
                 }();
-                request = new sql.Request(obj._meta.db.connection);
                 statementString = "update " + obj._meta.table + " set " + assignments + " where " + whereClause;
                 logSql(obj, statementString);
-                gen10_onFulfilled(gen1_promisify(function(gen14_callback) {
-                    return request.query(statementString, gen14_callback);
-                }).then(function(gen15_asyncResult) {
-                    gen15_asyncResult;
+                gen12_onFulfilled(gen1_promisify(function(gen16_callback) {
+                    return request.query(statementString, gen16_callback);
+                }).then(function(gen21_asyncResult) {
+                    gen21_asyncResult;
                     return obj.setNotChanged();
                 }));
             });
         };
         saveManyToOne = function(obj, field) {
-            var value, gen22_asyncResult, foreignId;
-            return new Promise(function(gen10_onFulfilled) {
+            var value, gen28_asyncResult, foreignId;
+            return new Promise(function(gen12_onFulfilled) {
                 value = obj[field];
-                gen10_onFulfilled(Promise.resolve(function() {
+                gen12_onFulfilled(Promise.resolve(function() {
                     if (!(value instanceof Array)) {
-                        return new Promise(function(gen10_onFulfilled) {
-                            gen10_onFulfilled(Promise.resolve(value.save()).then(function(gen23_asyncResult) {
-                                gen23_asyncResult;
+                        return new Promise(function(gen12_onFulfilled) {
+                            gen12_onFulfilled(Promise.resolve(value.save()).then(function(gen29_asyncResult) {
+                                gen29_asyncResult;
                                 foreignId = function() {
                                     if (obj._meta.foreignKeyFor) {
                                         return obj._meta.foreignKeyFor(field);
@@ -231,30 +247,30 @@
             });
         };
         saveManyToOnes = function(obj) {
-            var gen24_asyncResult;
-            return new Promise(function(gen10_onFulfilled) {
-                gen10_onFulfilled(Promise.resolve(gen2_listComprehension(foreignFieldsForObject(obj), false, function(gen25_index, field, gen26_result) {
-                    var gen27_asyncResult;
-                    return new Promise(function(gen10_onFulfilled) {
-                        gen10_onFulfilled(Promise.resolve(saveManyToOne(obj, field)).then(function(gen27_asyncResult) {
-                            return gen26_result(gen27_asyncResult, gen25_index);
+            var gen30_asyncResult;
+            return new Promise(function(gen12_onFulfilled) {
+                gen12_onFulfilled(Promise.resolve(gen2_listComprehension(foreignFieldsForObject(obj), false, function(gen31_index, field, gen32_result) {
+                    var gen33_asyncResult;
+                    return new Promise(function(gen12_onFulfilled) {
+                        gen12_onFulfilled(Promise.resolve(saveManyToOne(obj, field)).then(function(gen33_asyncResult) {
+                            return gen32_result(gen33_asyncResult, gen31_index);
                         }));
                     });
                 })));
             });
         };
         saveOneToMany = function(obj, field) {
-            var items, gen28_asyncResult;
-            return new Promise(function(gen10_onFulfilled) {
+            var items, gen34_asyncResult;
+            return new Promise(function(gen12_onFulfilled) {
                 items = obj[field];
-                gen10_onFulfilled(Promise.resolve(function() {
+                gen12_onFulfilled(Promise.resolve(function() {
                     if (items instanceof Array) {
-                        return new Promise(function(gen10_onFulfilled) {
-                            gen10_onFulfilled(Promise.resolve(gen2_listComprehension(items, false, function(gen29_index, item, gen30_result) {
-                                var gen31_asyncResult;
-                                return new Promise(function(gen10_onFulfilled) {
-                                    gen10_onFulfilled(Promise.resolve(item.save()).then(function(gen31_asyncResult) {
-                                        return gen30_result(gen31_asyncResult, gen29_index);
+                        return new Promise(function(gen12_onFulfilled) {
+                            gen12_onFulfilled(Promise.resolve(gen2_listComprehension(items, false, function(gen35_index, item, gen36_result) {
+                                var gen37_asyncResult;
+                                return new Promise(function(gen12_onFulfilled) {
+                                    gen12_onFulfilled(Promise.resolve(item.save()).then(function(gen37_asyncResult) {
+                                        return gen36_result(gen37_asyncResult, gen35_index);
                                     }));
                                 });
                             })));
@@ -264,13 +280,13 @@
             });
         };
         saveOneToManys = function(obj) {
-            var gen32_asyncResult;
-            return new Promise(function(gen10_onFulfilled) {
-                gen10_onFulfilled(Promise.resolve(gen2_listComprehension(foreignFieldsForObject(obj), false, function(gen33_index, field, gen34_result) {
-                    var gen35_asyncResult;
-                    return new Promise(function(gen10_onFulfilled) {
-                        gen10_onFulfilled(Promise.resolve(saveOneToMany(obj, field)).then(function(gen35_asyncResult) {
-                            return gen34_result(gen35_asyncResult, gen33_index);
+            var gen38_asyncResult;
+            return new Promise(function(gen12_onFulfilled) {
+                gen12_onFulfilled(Promise.resolve(gen2_listComprehension(foreignFieldsForObject(obj), false, function(gen39_index, field, gen40_result) {
+                    var gen41_asyncResult;
+                    return new Promise(function(gen12_onFulfilled) {
+                        gen12_onFulfilled(Promise.resolve(saveOneToMany(obj, field)).then(function(gen41_asyncResult) {
+                            return gen40_result(gen41_asyncResult, gen39_index);
                         }));
                     });
                 })));
@@ -280,44 +296,44 @@
             var h, fields;
             h = crypto.createHash("md5");
             fields = function() {
-                var gen36_results, gen37_items, gen38_i, field;
-                gen36_results = [];
-                gen37_items = fieldsForObject(obj);
-                for (gen38_i = 0; gen38_i < gen37_items.length; ++gen38_i) {
-                    field = gen37_items[gen38_i];
+                var gen42_results, gen43_items, gen44_i, field;
+                gen42_results = [];
+                gen43_items = fieldsForObject(obj);
+                for (gen44_i = 0; gen44_i < gen43_items.length; ++gen44_i) {
+                    field = gen43_items[gen44_i];
                     (function(field) {
-                        return gen36_results.push([ field, obj[field] ]);
+                        return gen42_results.push([ field, obj[field] ]);
                     })(field);
                 }
-                return gen36_results;
+                return gen42_results;
             }();
             h.update(JSON.stringify(fields));
             return h.digest("hex");
         };
         return prototype({
-            save: function(gen39_options) {
+            save: function(gen45_options) {
                 var self = this;
                 var force;
-                force = gen39_options !== void 0 && Object.prototype.hasOwnProperty.call(gen39_options, "force") && gen39_options.force !== void 0 ? gen39_options.force : false;
-                var gen40_asyncResult;
-                return new Promise(function(gen10_onFulfilled) {
-                    gen10_onFulfilled(Promise.resolve(function() {
+                force = gen45_options !== void 0 && Object.prototype.hasOwnProperty.call(gen45_options, "force") && gen45_options.force !== void 0 ? gen45_options.force : false;
+                var gen46_asyncResult;
+                return new Promise(function(gen12_onFulfilled) {
+                    gen12_onFulfilled(Promise.resolve(function() {
                         if (self.changed() || force) {
-                            return new Promise(function(gen10_onFulfilled) {
-                                gen10_onFulfilled(Promise.resolve(saveManyToOnes(self)).then(function(gen41_asyncResult) {
-                                    gen41_asyncResult;
+                            return new Promise(function(gen12_onFulfilled) {
+                                gen12_onFulfilled(Promise.resolve(saveManyToOnes(self)).then(function(gen47_asyncResult) {
+                                    gen47_asyncResult;
                                     return Promise.resolve(function() {
                                         if (!self.saved()) {
-                                            return new Promise(function(gen10_onFulfilled) {
-                                                gen10_onFulfilled(Promise.resolve(insert(self)));
+                                            return new Promise(function(gen12_onFulfilled) {
+                                                gen12_onFulfilled(Promise.resolve(insert(self)));
                                             });
                                         } else {
-                                            return new Promise(function(gen10_onFulfilled) {
-                                                gen10_onFulfilled(Promise.resolve(update(self)));
+                                            return new Promise(function(gen12_onFulfilled) {
+                                                gen12_onFulfilled(Promise.resolve(update(self)));
                                             });
                                         }
-                                    }()).then(function(gen42_asyncResult) {
-                                        gen42_asyncResult;
+                                    }()).then(function(gen48_asyncResult) {
+                                        gen48_asyncResult;
                                         return Promise.resolve(saveOneToManys(self));
                                     });
                                 }));
@@ -334,16 +350,16 @@
                 var self = this;
                 if (self._meta.compoundKey) {
                     return function() {
-                        var gen43_results, gen44_items, gen45_i, id;
-                        gen43_results = [];
-                        gen44_items = self._meta.id;
-                        for (gen45_i = 0; gen45_i < gen44_items.length; ++gen45_i) {
-                            id = gen44_items[gen45_i];
+                        var gen49_results, gen50_items, gen51_i, id;
+                        gen49_results = [];
+                        gen50_items = self._meta.id;
+                        for (gen51_i = 0; gen51_i < gen50_items.length; ++gen51_i) {
+                            id = gen50_items[gen51_i];
                             (function(id) {
-                                return gen43_results.push(self[id]);
+                                return gen49_results.push(self[id]);
                             })(id);
                         }
-                        return gen43_results;
+                        return gen49_results;
                     }();
                 } else {
                     return self[self._meta.id];
@@ -420,12 +436,12 @@
                 model.query = function() {
                     var self = this;
                     var args = Array.prototype.slice.call(arguments, 0, arguments.length);
-                    var gen46_asyncResult, gen47_asyncResult, gen48_o;
-                    return new Promise(function(gen10_onFulfilled) {
-                        gen48_o = db;
-                        gen10_onFulfilled(Promise.resolve(gen48_o.query.apply(gen48_o, args)).then(function(gen47_asyncResult) {
-                            return Promise.resolve(gen2_listComprehension(gen47_asyncResult, false, function(gen49_index, e, gen50_result) {
-                                return gen50_result(self(e, true), gen49_index);
+                    var gen52_asyncResult, gen53_asyncResult, gen54_o;
+                    return new Promise(function(gen12_onFulfilled) {
+                        gen54_o = db;
+                        gen12_onFulfilled(Promise.resolve(gen54_o.query.apply(gen54_o, args)).then(function(gen53_asyncResult) {
+                            return Promise.resolve(gen2_listComprehension(gen53_asyncResult, false, function(gen55_index, e, gen56_result) {
+                                return gen56_result(self(e, true), gen55_index);
                             }));
                         }));
                     });
@@ -434,34 +450,28 @@
             },
             query: function(query, params) {
                 var self = this;
-                var request, s, gen51_items, gen52_i, key, queryString, gen53_asyncResult;
-                return new Promise(function(gen10_onFulfilled) {
+                var request, gen57_items, gen58_i, key, gen59_asyncResult;
+                return new Promise(function(gen12_onFulfilled) {
                     request = new sql.Request(self.connection);
-                    queryString = function() {
-                        if (params) {
-                            s = query;
-                            gen51_items = Object.keys(params);
-                            for (gen52_i = 0; gen52_i < gen51_items.length; ++gen52_i) {
-                                key = gen51_items[gen52_i];
-                                s = s.replace(new RegExp("@" + key + "\\b", "g"), toSql(params[key]));
-                            }
-                            return s;
-                        } else {
-                            return query;
+                    if (params) {
+                        gen57_items = Object.keys(params);
+                        for (gen58_i = 0; gen58_i < gen57_items.length; ++gen58_i) {
+                            key = gen57_items[gen58_i];
+                            request.input(key, params[key]);
                         }
-                    }();
-                    gen10_onFulfilled(gen1_promisify(function(gen14_callback) {
-                        return request.query(queryString, gen14_callback);
+                    }
+                    gen12_onFulfilled(gen1_promisify(function(gen16_callback) {
+                        return request.query(query, gen16_callback);
                     }));
                 });
             },
             connect: function(config) {
                 var self = this;
-                var gen54_asyncResult;
-                return new Promise(function(gen10_onFulfilled) {
+                var gen60_asyncResult;
+                return new Promise(function(gen12_onFulfilled) {
                     self.connection = new sql.Connection(config);
-                    gen10_onFulfilled(gen1_promisify(function(gen14_callback) {
-                        return self.connection.connect(gen14_callback);
+                    gen12_onFulfilled(gen1_promisify(function(gen16_callback) {
+                        return self.connection.connect(gen16_callback);
                     }));
                 });
             },
@@ -472,33 +482,16 @@
         };
         if (config) {
             return function() {
-                var gen55_asyncResult;
-                return new Promise(function(gen10_onFulfilled) {
-                    gen10_onFulfilled(Promise.resolve(db.connect(config)).then(function(gen55_asyncResult) {
-                        gen55_asyncResult;
+                var gen61_asyncResult;
+                return new Promise(function(gen12_onFulfilled) {
+                    gen12_onFulfilled(Promise.resolve(db.connect(config)).then(function(gen61_asyncResult) {
+                        gen61_asyncResult;
                         return db;
                     }));
                 });
             }();
         } else {
             return db;
-        }
-    };
-    toSql = function(v) {
-        if (typeof v === "string") {
-            return "'" + v.replace(/'/g, "''") + "'";
-        } else if (v instanceof Date) {
-            return "'" + v.toISOString() + "'";
-        } else if (typeof v === "boolean") {
-            if (v) {
-                return 1;
-            } else {
-                return 0;
-            }
-        } else if (typeof v === "number") {
-            return v;
-        } else {
-            throw new Error("could not pass value to query: " + v);
         }
     };
 }).call(this);

@@ -29,7 +29,7 @@ rowBase =
     fields = keys.join ', '
     values = [
       key <- keys
-      (obj.(key)) toSql
+      '@' + key
     ].join ', '
 
     request = @new sql.Request(obj._meta.db.connection)
@@ -39,6 +39,9 @@ rowBase =
         "output Inserted.#(obj._meta.id)"
       else
         ''
+
+    for each @(name) in (keys)
+      request.input(name, obj.(name))
 
     statementString = "insert into #(obj._meta.table) (#(fields)) #(outputId) values (#(values))" 
     logSql(obj, statementString)
@@ -56,17 +59,26 @@ rowBase =
     assignments = [
       key <- keys
       key != obj._meta.id
-      sqlValue = (obj.(key)) toSql
-      "#(key) = #(sqlValue)"
+      "#(key) = @#(key)"
     ].join ', '
+
+    request = @new sql.Request(obj._meta.db.connection)
+
+    for each @(n) in (keys)
+      if (n != obj._meta.id)
+        request.input(n, obj.(n))
 
     whereClause =
       if (obj._meta.compoundKey)
-        [key <- obj._meta.id, "#(key) = #((obj.(key)) toSql)"].join ' and '
-      else
-        "#(obj._meta.id) = #((obj.identity()) toSql)"
+        for each @(name) in (obj._meta.compoundKey)
+          request.input (name, obj.(name))
 
-    request = @new sql.Request(obj._meta.db.connection)
+        [key <- obj._meta.id, "#(key) = @#(key)"].join ' and '
+      else
+        request.input (obj._meta.id, obj.identity())
+
+        "#(obj._meta.id) = @#(obj._meta.id)"
+
     statementString = "update #(obj._meta.table) set #(assignments) where #(whereClause)" 
     logSql(obj, statementString)
 
@@ -195,17 +207,11 @@ exports.db(config) =
     query(query, params) =
       request = @new sql.Request(self.connection)
 
-      queryString =
-        if (params)
-          s = query
-          for each @(key) in (Object.keys(params))
-            s := s.replace(@new RegExp "@#(key)\\b" 'g', (params.(key)) toSql)
+      if (params)
+        for each @(key) in (Object.keys(params))
+          request.input(key, params.(key))
 
-          s
-        else
-          query
-
-      request.query (queryString) ^!
+      request.query (query) ^!
 
     connect(config) =
       self.connection := @new sql.Connection(config)
@@ -222,18 +228,3 @@ exports.db(config) =
     }()
   else
     db
-
-(v) toSql =
-  if (v :: String)
-    "'" + v.replace r/'/g "''" + "'"
-  else if (v :: Date)
-    "'" + v.toISOString() + "'"
-  else if (v :: Boolean)
-    if (v)
-      1
-    else
-      0
-  else if (v :: Number)
-    v
-  else
-    @throw @new Error "could not pass value to query: #(v)"
