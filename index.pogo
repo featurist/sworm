@@ -23,6 +23,13 @@ rowBase =
     key
   ]
 
+  logSql(obj, sql) =
+    if (obj._meta.db.log)
+      if (obj._meta.db.log :: Function)
+        obj._meta.db.log (sql)
+      else
+        console.log (sql)
+
   insert(obj) =
     keys = fieldsForObject(obj)
     fields = keys.join ', '
@@ -31,13 +38,22 @@ rowBase =
       (obj.(key)) toSql
     ].join ', '
 
-    request = @new sql.Request(obj._meta.connection)
-    statementString = "insert into #(obj._meta.table) (#(fields)) output Inserted.#(obj._meta.id) values (#(values))" 
-    if (obj._meta.log)
-      console.log (statementString)
+    request = @new sql.Request(obj._meta.db.connection)
+
+    outputId =
+      if (obj._meta.id :: String)
+        "output Inserted.#(obj._meta.id)"
+      else
+        ''
+
+    statementString = "insert into #(obj._meta.table) (#(fields)) #(outputId) values (#(values))" 
+    logSql(obj, statementString)
 
     r = request.query (statementString) ^!
-    obj.(obj._meta.id) = r.0.(obj._meta.id)
+
+    obj.setSaved()
+    if (@not obj._meta.compoundKey)
+      obj.(obj._meta.id) = r.0.(obj._meta.id)
 
     obj.setNotChanged()
 
@@ -49,12 +65,18 @@ rowBase =
       "#(key) = #(sqlValue)"
     ].join ', '
 
-    request = @new sql.Request(obj._meta.connection)
-    statementString = "update #(obj._meta.table) set #(assignments) where #(obj._meta.id) = #(obj.identity())" 
-    if (obj._meta.log)
-      console.log (statementString)
+    whereClause =
+      if (obj._meta.compoundKey)
+        [key <- obj._meta.id, "#(key) = #((obj.(key)) toSql)"].join ' and '
+      else
+        "#(obj._meta.id) = #((obj.identity()) toSql)"
+
+    request = @new sql.Request(obj._meta.db.connection)
+    statementString = "update #(obj._meta.table) set #(assignments) where #(whereClause)" 
+    logSql(obj, statementString)
 
     request.query (statementString) ^!
+    obj.setNotChanged()
 
   saveManyToOne(obj, field) =
     value = obj.(field)
@@ -66,7 +88,8 @@ rowBase =
         else
           field + "Id"
 
-      obj.(foreignId) = value.identity()
+      if (@not value._meta.compoundKey)
+        obj.(foreignId) = value.identity()
 
   saveManyToOnes(obj) = [
     field <- foreignFieldsForObject(obj)
@@ -97,9 +120,9 @@ rowBase =
     
   prototype {
     save(force = false) =
-      if (self.changed() @and @not force)
+      if (self.changed() @or force)
         saveManyToOnes(self)!
-        if (@not self.identity())
+        if (@not self.saved())
           insert(self)!
         else
           update(self)!
@@ -107,53 +130,89 @@ rowBase =
         saveOneToManys(self)!
 
     changed() =
-      self._hash != hash(self)
+      @not self._hash @or self._hash != hash(self)
 
     identity() =
-      self.(self._meta.id)
+      if (self._meta.compoundKey)
+        [id <- self._meta.id, self.(id)]
+      else
+        self.(self._meta.id)
+
+    saved() =
+      self._saved
 
     setNotChanged() =
-      Object.defineProperty(self, '_hash', value = hash(self))
+      if (self._hash)
+        self._hash = hash(self)
+      else
+        Object.defineProperty(self, '_hash', value = hash(self), writable = true)
+
+    setSaved() =
+      if (@not self._saved)
+        Object.defineProperty(self, '_saved', value = true)
   }
+
+option (obj, property, value) =
+  if (obj.hasOwnProperty(property))
+    opt = obj.(property)
+    @delete obj.(property)
+    opt
+  else
+    value
 
 exports.db(config) =
   db = {
-    row (rowConfig) =
-      table = rowConfig.table
-      @delete rowConfig.table
+    log =
+      if (config)
+        config.log
 
-      id = rowConfig.id @or 'id'
-      @delete rowConfig.id
+    config = config
 
-      log = rowConfig.log @or false
-      @delete rowConfig.log
+    model (modelConfig) =
+      foreignKeyFor = option(modelConfig, 'foreignKeyFor')
+      id = option(modelConfig, 'id', 'id')
+      table = option(modelConfig, 'table')
 
-      foreignKeyFor = rowConfig.foreignKeyFor @or false
-      @delete rowConfig.foreignKeyFor
-
-      rowConfig._meta = {
+      modelConfig._meta = {
         table = table
         id = id
-        log = log
-        connection = self.connection
+        db = self
         foreignKeyFor = foreignKeyFor
+        compoundKey = id :: Array
       }
 
-      rowPrototype = prototypeExtending (rowBase) (rowConfig)
+      modelPrototype = prototypeExtending (rowBase) (modelConfig)
 
-      @(obj)
-        row = rowPrototype(obj)
+      model (obj, saved) =
+        row = modelPrototype(obj)
 
-        if (row.identity())
+        if (saved)
+          row.setSaved()
           row.setNotChanged()
 
         row
+      
+      model.query (args, ...) =
+        [e <- db.query (args, ...)!, self(e, true)]
 
-    query(query) =
+      model
+
+    query(query, params) =
       request = @new sql.Request(self.connection)
-      records = request.query (query) ^!
 
-    connect() =
+      queryString =
+        if (params)
+          s = query
+          for each @(key) in (Object.keys(params))
+            s := s.replace(@new RegExp "@#(key)\\b" 'g', (params.(key)) toSql)
+
+          s
+        else
+          query
+
+      request.query (queryString) ^!
+
+    connect(config) =
       self.connection := @new sql.Connection(config)
       self.connection.connect(^)!
 
@@ -161,8 +220,13 @@ exports.db(config) =
       self.connection.close()
   }
 
-  db.connect()!
-  db
+  if (config)
+    @{
+      db.connect(config)!
+      db
+    }()
+  else
+    db
 
 (v) toSql =
   if (v :: String)

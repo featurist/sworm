@@ -1,21 +1,22 @@
 expect = require 'chai'.expect
-orb = require '..'
+mssqlOrm = require '..'
 
 describe 'mssql-orm'
   db = nil
   tables = []
   person = nil
   address = nil
+  personAddress = nil
 
   config = {
     user = 'user'
     password = 'password'
     server = 'windows'
-    database ='orb'
+    database ='mssqlOrm'
   }
 
   before
-    schema = orb.db(config)!
+    schema = mssqlOrm.db(config)!
 
     (schema) createTable! 'people' "CREATE TABLE [dbo].[people](
                                       [id] [int] IDENTITY(1,1) NOT NULL,
@@ -24,6 +25,12 @@ describe 'mssql-orm'
                                       [likesNoodles] [bit] NULL,
                                       [addressId] [int] NULL
                                     )"
+
+    (schema) createTable! 'people_addresses' "CREATE TABLE [dbo].[people_addresses](
+                                                [addressId] [int] NOT NULL,
+                                                [personId] [int] NOT NULL,
+                                                [happyHere] [bit] NULL
+                                              )"
 
     (schema) createTable! 'addresses' "CREATE TABLE [dbo].[addresses](
                                         [id] [int] IDENTITY(1,1) NOT NULL,
@@ -47,11 +54,13 @@ describe 'mssql-orm'
       db.query "delete from #(table)"!
 
   beforeEach
-    db := orb.db(config)!
+    db := mssqlOrm.db(config)!
+    db.log = false
+
     clearTables()!
 
-    person := db.row (table = 'people')
-    address := db.row {
+    person := db.model (table = 'people')
+    address := db.model {
       table = 'addresses'
 
       addPerson(person) =
@@ -59,6 +68,7 @@ describe 'mssql-orm'
         person.address = self
         self.people.push(person)
     }
+    personAddress := db.model(table = 'people_addresses', id = ['addressId', 'personId'])
 
   afterEach
     db.close()
@@ -120,16 +130,57 @@ describe 'mssql-orm'
       people = db.query 'select * from people'!
       expect(people).to.eql [{id = p.id, name = "bob's name is 'matilda'", dob = null, likesNoodles = null, addressId = null}]
 
-  it 'only saves once'
-    p = person {
-      name = 'bob'
-    }
+  describe 'only saving when modified'
+    bob = nil
+    statements = nil
 
-    p.save()!
-    p.save()!
+    beforeEach
+      bob := person {
+        name = 'bob'
+      }
 
-    people = db.query 'select * from people'!
-    expect(people).to.eql [{id = p.id, name = 'bob', dob = null, likesNoodles = null, addressId = null}]
+      statements := []
+      db.log(sql) = statements.push(r/^(insert|update)/.exec(sql).1)
+
+    it "doesn't save unmodified entity again after insert"
+      bob.save()!
+      expect(statements).to.eql ['insert']
+      bob.save()!
+      expect(statements).to.eql ['insert']
+
+    it "doesn't save unmodified entity again after update"
+      bob.save()!
+      expect(statements).to.eql ['insert']
+
+      bob.name = 'jane'
+      bob.save()!
+      expect(statements).to.eql ['insert', 'update']
+
+      bob.save()!
+      expect(statements).to.eql ['insert', 'update']
+
+    it "can force an update"
+      bob.save()!
+      expect(statements).to.eql ['insert']
+
+      bob.name = 'jane'
+      bob.save()!
+      expect(statements).to.eql ['insert', 'update']
+
+      bob.save(force = true)!
+      expect(statements).to.eql ['insert', 'update', 'update']
+
+    it "doesn't update after entity taken from model query"
+      bob.save()!
+      expect(statements).to.eql ['insert']
+
+      savedBob = person.query 'select * from people'!.0
+      savedBob.save()!
+      expect(statements).to.eql ['insert']
+
+      savedBob.name = 'jane'
+      savedBob.save()!
+      expect(statements).to.eql ['insert', 'update']
 
   it 'can save and update'
     p = person {
@@ -139,7 +190,6 @@ describe 'mssql-orm'
     p.save()!
 
     p.name = 'jane'
-
     p.save()!
 
     people = db.query 'select * from people'!
@@ -147,7 +197,7 @@ describe 'mssql-orm'
 
   describe 'custom id columns'
     it 'can insert with weird_id'
-      personWeirdId = db.row (table = 'people_weird_id', id = 'weird_id')
+      personWeirdId = db.model (table = 'people_weird_id', id = 'weird_id')
 
       p = personWeirdId {
         name = 'bob'
@@ -159,32 +209,139 @@ describe 'mssql-orm'
       people = db.query 'select * from people_weird_id'!
       expect(people).to.eql [{weird_id = p.weird_id, name = 'bob', addressWeirdId = null}]
 
-  it 'can attach to objects from query'
-    bob = person {
-      name = 'bob'
-    }
-    bob.save()!
+  describe 'compound keys'
+    it 'can save an entity with compound keys'
+      pa = personAddress {
+        personId = 12
+        addressId = 34
+      }
 
-    jane = person {
-      name = 'jane'
-    }
-    jane.save()!
+      pa.save()!
 
-    people = [p <- db.query 'select * from people'!, person (p)]
+      expect(db.query 'select * from people_addresses'!).to.eql [
+        {
+          personId = 12
+          addressId = 34
+          happyHere = null
+        }
+      ]
 
-    expect([p <- people, p.name]).to.eql [
-      'bob'
-      'jane'
-    ]
+    it 'can update an entity with compound keys'
+      pa = personAddress {
+        personId = 12
+        addressId = 34
+        happyHere = false
+      }
 
-    people.0.save()!
-    people.1.name = 'jenifer'
-    people.1.save()!
+      pa.save()!
 
-    expect([p <- db.query 'select * from people'!, p.name]).to.eql [
-      'bob'
-      'jenifer'
-    ]
+      expect(db.query 'select * from people_addresses'!).to.eql [
+        {
+          personId = 12
+          addressId = 34
+          happyHere = false
+        }
+      ]
+
+      pa.happyHere = true
+      pa.save()!
+
+      expect(db.query 'select * from people_addresses'!).to.eql [
+        {
+          personId = 12
+          addressId = 34
+          happyHere = true
+        }
+      ]
+
+    describe 'saving only when modified'
+      pa = nil
+      statements = nil
+
+      beforeEach
+        pa := personAddress {
+          personId = 12
+          addressId = 34
+        }
+
+        statements := []
+        db.log(sql) = statements.push(r/^(insert|update)/.exec(sql).1)
+
+      it 'can save an entity with compound keys'
+        pa.save()!
+        expect(statements).to.eql ['insert']
+        pa.save()!
+        expect(statements).to.eql ['insert']
+
+      it 'can update an entity with compound keys'
+        pa.save()!
+        expect(statements).to.eql ['insert']
+
+        pa.happyHere = true
+        pa.save()!
+        expect(statements).to.eql ['insert', 'update']
+
+        pa.save()!
+        expect(statements).to.eql ['insert', 'update']
+
+  describe 'queries'
+    describe 'parameterised queries'
+      it 'can pass parameters to a query'
+        person {
+          name = 'bob'
+        }.save()!
+
+        person {
+          name = 'jane'
+        }.save()!
+
+        records = db.query! 'select name from people where name = @name' { name 'jane' }
+        expect(records).to.eql [
+          { name = 'jane' }
+        ]
+
+    describe 'model queries'
+      it 'can pass parameters to a query'
+        person {
+          name = 'bob'
+        }.save()!
+
+        person {
+          name = 'jane'
+        }.save()!
+
+        records = person.query! 'select name from people where name = @name' { name 'jane' }
+        expect [p <- records, {name = p.name}].to.eql [
+          { name = 'jane' }
+        ]
+
+      it 'entites are returned from query and can be modified and saved'
+        bob = person {
+          name = 'bob'
+        }
+        bob.save()!
+
+        jane = person {
+          name = 'jane'
+        }
+        jane.save()!
+
+        people = person.query 'select * from people'!
+
+        expect([p <- people, p.name]).to.eql [
+          'bob'
+          'jane'
+        ]
+
+        people.0.save()!
+        people.1.name = 'jenifer'
+        people.1.save()!
+
+        expect([p <- db.query 'select * from people'!, p.name]).to.eql [
+          'bob'
+          'jenifer'
+        ]
+    
 
   describe 'foreign keys'
     it 'can save a many to one relationship'
@@ -204,7 +361,7 @@ describe 'mssql-orm'
 
     describe 'custom foreign keys'
       it 'can save a many to one relationship with a custom foreign key'
-        personWeirdId = db.row (table = 'people_weird_id', id = 'weird_id', foreignKeyFor (x) = x + 'WeirdId')
+        personWeirdId = db.model (table = 'people_weird_id', id = 'weird_id', foreignKeyFor (x) = x + 'WeirdId')
 
         bob = personWeirdId {
           name = 'bob'
@@ -246,3 +403,60 @@ describe 'mssql-orm'
         { name = 'bob', addressId = rueDEssert.id }
         { name = 'jane', addressId = rueDEssert.id }
       ]
+
+    it 'can have a many to many relationship'
+      (person) livesIn (address) =
+        pa = personAddress {person = person, address = address}
+
+        person.addresses = person.addresses @or []
+        person.addresses.push(pa)
+
+        address.people = address.people @or []
+        address.people.push(pa)
+
+      bob = person {name = 'bob'}
+      jane = person {name = 'jane'}
+
+      fremantle = address {
+        address = "Fremantle"
+      }
+      essert = address {
+        address = "15 Rue d'Essert"
+      }
+
+      bob @livesIn fremantle
+      jane @livesIn fremantle
+      jane @livesIn essert
+
+      essert.save()!
+      fremantle.save()!
+
+      expect [p <- db.query 'select * from people'!, { id = p.id, name = p.name }].to.eql [
+        { id = jane.id, name = 'jane' }
+        { id = bob.id, name = 'bob' }
+      ]
+
+      expect(db.query 'select * from people_addresses'!).to.eql [
+        { addressId = essert.id, personId = jane.id, happyHere = null }
+        { addressId = fremantle.id, personId = jane.id, happyHere = null }
+        { addressId = fremantle.id, personId = bob.id, happyHere = null }
+      ]
+
+      expect(db.query 'select * from addresses'!).to.eql [
+        { id = essert.id, address = "15 Rue d'Essert" }
+        { id = fremantle.id, address = "Fremantle" }
+      ]
+
+  describe 'connection'
+    it 'can define models before connecting to database'
+      schema = mssqlOrm.db()
+      personModel = schema.model (table = 'people')
+
+      bob = personModel {
+        name = 'bob'
+      }
+
+      schema.connect (config)!
+
+      bob.save()!
+      expect([p <- db.query 'select * from people'!, p.name]).to.eql ['bob']
