@@ -1,0 +1,40 @@
+{
+  "name": "mssql-orm",
+  "version": "0.1.0",
+  "description": "an ORM for MSSQL",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "bluebird": "^2.2.2",
+    "mssql": "^1.1.1"
+  },
+  "devDependencies": {
+    "chai": "^1.9.1",
+    "pogo": "^0.9.4",
+    "mocha": "^1.21.4"
+  },
+  "scripts": {
+    "test": "mocha",
+    "prepublish": "pogo -c index.pogo"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/featurist/mssql-orm.git"
+  },
+  "keywords": [
+    "mssql",
+    "database",
+    "orm",
+    "sqlserver",
+    "sql",
+    "server"
+  ],
+  "author": "Tim Macfarlane <timmacfarlane@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/featurist/mssql-orm/issues"
+  },
+  "homepage": "https://github.com/featurist/mssql-orm"
+}
