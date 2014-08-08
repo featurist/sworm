@@ -2,21 +2,15 @@ sql = require 'mssql'
 crypto = require 'crypto'
 
 rowBase =
-  keysForObject(obj) = [
-    key <- Object.keys(obj)
-    @not r/^_/.test(key) @and key != obj._meta.id
-    key
-  ]
-
   fieldsForObject(obj) = [
-    key <- keysForObject(obj)
+    key <- Object.keys(obj)
     value = obj.(key)
     (value :: Date) @or (value != null @and value != nil @and @not (value :: Object))
     key
   ]
 
   foreignFieldsForObject(obj) = [
-    key <- keysForObject(obj)
+    key <- Object.keys(obj)
     @not r/^_/.test(key) @and key != obj._meta.id
     value = obj.(key)
     @not (value :: Date) @and (value :: Object)
@@ -61,6 +55,7 @@ rowBase =
     keys = fieldsForObject(obj)
     assignments = [
       key <- keys
+      key != obj._meta.id
       sqlValue = (obj.(key)) toSql
       "#(key) = #(sqlValue)"
     ].join ', '

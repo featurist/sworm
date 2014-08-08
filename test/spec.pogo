@@ -43,6 +43,11 @@ describe 'mssql-orm'
                                                [addressWeirdId] [int] NULL
                                              )"
 
+    (schema) createTable! 'people_explicit_id' "CREATE TABLE [dbo].[people_explicit_id](
+                                                 [id] [int] NOT NULL,
+                                                 [name] [nvarchar](50) NOT NULL,
+                                               )"
+
   createTable (db, name, sql) =
     tables.push(name)
 
@@ -208,6 +213,20 @@ describe 'mssql-orm'
 
       people = db.query 'select * from people_weird_id'!
       expect(people).to.eql [{weird_id = p.weird_id, name = 'bob', addressWeirdId = null}]
+
+  describe 'explicitly setting id'
+    it 'can insert with id'
+      personExplicitId = db.model (table = 'people_explicit_id')
+
+      p = personExplicitId {
+        id = 1
+        name = 'bob'
+      }
+
+      p.save()!
+
+      people = db.query 'select * from people_explicit_id'!
+      expect(people).to.eql [{id = 1, name = 'bob'}]
 
   describe 'compound keys'
     it 'can save an entity with compound keys'
