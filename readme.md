@@ -6,38 +6,44 @@ A very lightweight **write only** Node.js ORM for Microsoft SQL Server.
 
 The features in this module are mostly for **writing graphs of related entities**. Querying, on the other hand, is done with raw SQL so you can do it fast. See the [query API](#queries) for details.
 
-Why ORMs shouldn't support querying:
+This ORM avoids some of the largest issues experienced in other ORMs:
 
-* query performance is too easy to get wrong, e.g. N+1
-* configuring eager and lazy loading
+* query performance is too opaque
+* N+1 queries are frequently the default
+* configuring eager and lazy loading is tricky
 * one-to-many, many-to-one, many-to-many relationships are notoriously difficult to get right
-* managing sessions and identity maps
-* debugging massive SQL queries
+* lifecycle management of sessions and identity maps is rarely pleasant
+* check out the massive generated SQL
 
 Just write SQL, you know how.
 
 ## Example
 
-    var mssql = require('mssql-orm');
+    var person = db.model({table: 'people'});
+    var address = db.model({table: 'addresses'});
 
-    mssql.db({
-      user: 'user',
-      password: 'password',
-      server: 'localhost',
-      database: 'databasename'
-    }).then(function (db) {
-      var person = db.model({table: 'people'});
-
-      var bob = person({
-        name: 'bob'
-      });
-
-      return bob.save().then(function () {
-        return db.query('select * from people').then(function (people) {
-          console.log('people', people);
-        });
-      });
+    var bob = person({
+      name: 'bob',
+      address: address({
+        address: 'Fremantle'
+      })
     });
+
+    bob.save()
+
+Produces:
+
+    -------- people ---------
+    | id | name | addressId |
+    -------------------------
+    | 11 | bob  | 22        |
+    -------------------------
+
+    ------- addresses ------
+    | id | address         |
+    ------------------------
+    | 22 | Fremantle       |
+    ------------------------
 
 ## Connection
 
@@ -56,6 +62,17 @@ Connect:
       ...
 
     });
+  var person = db.model({table: 'people'});
+  var address = db.model({table: 'addresses'});
+
+  var bob = person({
+    name: 'bob',
+    address: address({
+      address: '...'
+    })
+  });
+
+  return bob.save()
 
 Or define models then connect:
 
@@ -76,7 +93,17 @@ Or define models then connect:
 
     });
 
-For connection options, see [node-mssql Configuration](https://github.com/patriksimek/node-mssql#configuration-1).
+Connection options:
+
+  * `log`: either `true` to log SQL statements with `console.log()`, or a function `function (sql) { ... }` for custom logging. Defaults to no logging.
+
+For all other connection options, see [node-mssql Configuration](https://github.com/patriksimek/node-mssql#configuration-1).
+
+### Close
+
+Close the connection after use:
+
+    db.close()
 
 ## Models
 
@@ -86,8 +113,7 @@ For connection options, see [node-mssql Configuration](https://github.com/patrik
 
   * `table` (`undefined`) the name of the table to save entities to
   * `id` (`'id'`) the name of the identity column. This can be an array of id columns for compound keys.
-  * `log` (`false`) whether to log SQL statements, for debugging
-  * `foreignKeyFor` a function that returns a foreign key field name for a member, defaults to:
+  * `foreignKeyFor` a function that returns a foreign key field name for a member (see [Relationships](#relationships)), defaults to:
 
         function foreignKeyFor(fieldName) {
           return fieldName + 'Id';
@@ -152,7 +178,7 @@ Entities can contain fields that are other entities. This way you can build up g
 
 When entity A contains a field that is entity B, then B will be saved first and B's ID will be set and saved with A.
 
-The foreign key of the member will be saved on the field name `memberId`. So `address` will have a foreign key of `addressId`.
+The foreign key of the member will be saved on the field name `memberId`. So `address` will have a foreign key of `addressId`. See the `foreignKeyFor` option in [Models](#models).
 
     var person = db.model({table: 'people'});
     var address = db.model({table: 'addresses'});
@@ -195,9 +221,12 @@ This allows entities B and C to refer to entity A, as they would in their tables
     var jane = person({name: 'jane'});
 
     var essert = address({
-      address: "15 Rue d'Essert"
+      address: "15 Rue d'Essert",
       people: [bob, jane]
     });
+
+    bob.address = essert;
+    jane.address = essert;
 
     essert.save().then(function () {
       // all objects saved.
