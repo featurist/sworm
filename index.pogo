@@ -1,5 +1,7 @@
-sql = require 'mssql'
 crypto = require 'crypto'
+_ = require 'underscore'
+mssqlDriver = require './mssqlDriver'
+pgDriver = require './pgDriver'
 
 rowBase =
   fieldsForObject(obj) = [
@@ -17,13 +19,6 @@ rowBase =
     key
   ]
 
-  logSql(obj, sql) =
-    if (obj._meta.db.log)
-      if (obj._meta.db.log :: Function)
-        obj._meta.db.log (sql)
-      else
-        console.log (sql)
-
   insert(obj) =
     keys = fieldsForObject(obj)
     fields = keys.join ', '
@@ -32,21 +27,25 @@ rowBase =
       '@' + key
     ].join ', '
 
-    request = @new sql.Request(obj._meta.db.connection)
-
     outputId =
       if (obj._meta.id :: String)
-        "output Inserted.#(obj._meta.id)"
+        {
+          beforeValues() = obj._meta.db.driver.outputIdBeforeValues(obj._meta.id)
+          afterValues() = obj._meta.db.driver.outputIdAfterValues(obj._meta.id)
+        }
       else
-        ''
+        {
+          beforeValues() = ''
+          afterValues() = ''
+        }
 
-    for each @(name) in (keys)
-      request.input(name, obj.(name))
+    statementString = "insert into #(obj._meta.table)
+                         (#(fields))
+                         #(outputId.beforeValues())
+                         values (#(values))
+                         #(outputId.afterValues())"
 
-    statementString = "insert into #(obj._meta.table) (#(fields)) #(outputId) values (#(values))" 
-    logSql(obj, statementString)
-
-    r = request.query (statementString) ^!
+    r = obj._meta.db.query (statementString, _.pick(obj, keys))!
 
     obj.setSaved()
     if (@not obj._meta.compoundKey)
@@ -55,34 +54,29 @@ rowBase =
     obj.setNotChanged()
 
   update(obj) =
-    keys = fieldsForObject(obj)
+    keys = [
+      key <- fieldsForObject(obj)
+      key != obj._meta.id
+      key
+    ]
     assignments = [
       key <- keys
-      key != obj._meta.id
       "#(key) = @#(key)"
     ].join ', '
 
-    request = @new sql.Request(obj._meta.db.connection)
-
-    for each @(n) in (keys)
-      if (n != obj._meta.id)
-        request.input(n, obj.(n))
-
     whereClause =
       if (obj._meta.compoundKey)
-        for each @(name) in (obj._meta.compoundKey)
-          request.input (name, obj.(name))
-
+        keys.push(obj._meta.id, ...)
         [key <- obj._meta.id, "#(key) = @#(key)"].join ' and '
       else
-        request.input (obj._meta.id, obj.identity())
+        if (obj.identity() == nil)
+          @throw @new Error "entity must have #(obj._meta.id) to be updated"
 
+        keys.push(obj._meta.id)
         "#(obj._meta.id) = @#(obj._meta.id)"
 
-    statementString = "update #(obj._meta.table) set #(assignments) where #(whereClause)" 
-    logSql(obj, statementString)
-
-    request.query (statementString) ^!
+    statementString = "update #(obj._meta.table) set #(assignments) where #(whereClause)"
+    obj._meta.db.query (statementString, _.pick(obj, keys))!
     obj.setNotChanged()
 
   saveManyToOne(obj, field) =
@@ -93,7 +87,7 @@ rowBase =
         if (obj._meta.foreignKeyFor)
           obj._meta.foreignKeyFor(field)
         else
-          field + "Id"
+          field + "_id"
 
       if (@not value._meta.compoundKey)
         obj.(foreignId) = value.identity()
@@ -124,7 +118,7 @@ rowBase =
     ]
     h.update (JSON.stringify(fields))
     h.digest 'hex'
-    
+
   prototype {
     save(force = false) =
       if (self.changed() @or force)
@@ -199,27 +193,34 @@ exports.db(config) =
             row.setNotChanged()
 
         row
-      
+
       model.query (args, ...) =
         [e <- db.query (args, ...)!, self(e, saved = true)]
 
       model
 
     query(query, params) =
-      request = @new sql.Request(self.connection)
+      self.logQuery(query, params)
+      self.driver.query(query, params)
 
-      if (params)
-        for each @(key) in (Object.keys(params))
-          request.input(key, params.(key))
-
-      request.query (query) ^!
+    logQuery(query, params) =
+      if (self.log)
+        if (self.log :: Function)
+          self.log (query, params)
+        else
+          console.log (query, params)
 
     connect(config) =
-      self.connection := @new sql.Connection(config)
-      self.connection.connect(^)!
+      self.driver =
+        ({
+          mssql = mssqlDriver
+          pg = pgDriver
+        }.(config.driver))()
+
+      self.driver.connect(config)!
 
     close() =
-      self.connection.close()
+      self.driver.close()
   }
 
   if (config)
@@ -229,3 +230,5 @@ exports.db(config) =
     }()
   else
     db
+
+
