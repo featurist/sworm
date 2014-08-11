@@ -424,24 +424,31 @@
                     compoundKey: id instanceof Array
                 };
                 modelPrototype = prototypeExtending(rowBase, modelConfig);
-                model = function(obj, saved) {
+                model = function(obj, gen52_options) {
+                    var saved, modified;
+                    saved = gen52_options !== void 0 && Object.prototype.hasOwnProperty.call(gen52_options, "saved") && gen52_options.saved !== void 0 ? gen52_options.saved : false;
+                    modified = gen52_options !== void 0 && Object.prototype.hasOwnProperty.call(gen52_options, "modified") && gen52_options.modified !== void 0 ? gen52_options.modified : false;
                     var row;
                     row = modelPrototype(obj);
                     if (saved) {
                         row.setSaved();
-                        row.setNotChanged();
+                        if (!modified) {
+                            row.setNotChanged();
+                        }
                     }
                     return row;
                 };
                 model.query = function() {
                     var self = this;
                     var args = Array.prototype.slice.call(arguments, 0, arguments.length);
-                    var gen52_asyncResult, gen53_asyncResult, gen54_o;
+                    var gen53_asyncResult, gen54_asyncResult, gen55_o;
                     return new Promise(function(gen12_onFulfilled) {
-                        gen54_o = db;
-                        gen12_onFulfilled(Promise.resolve(gen54_o.query.apply(gen54_o, args)).then(function(gen53_asyncResult) {
-                            return Promise.resolve(gen2_listComprehension(gen53_asyncResult, false, function(gen55_index, e, gen56_result) {
-                                return gen56_result(self(e, true), gen55_index);
+                        gen55_o = db;
+                        gen12_onFulfilled(Promise.resolve(gen55_o.query.apply(gen55_o, args)).then(function(gen54_asyncResult) {
+                            return Promise.resolve(gen2_listComprehension(gen54_asyncResult, false, function(gen56_index, e, gen57_result) {
+                                return gen57_result(self(e, {
+                                    saved: true
+                                }), gen56_index);
                             }));
                         }));
                     });
@@ -450,13 +457,13 @@
             },
             query: function(query, params) {
                 var self = this;
-                var request, gen57_items, gen58_i, key, gen59_asyncResult;
+                var request, gen58_items, gen59_i, key, gen60_asyncResult;
                 return new Promise(function(gen12_onFulfilled) {
                     request = new sql.Request(self.connection);
                     if (params) {
-                        gen57_items = Object.keys(params);
-                        for (gen58_i = 0; gen58_i < gen57_items.length; ++gen58_i) {
-                            key = gen57_items[gen58_i];
+                        gen58_items = Object.keys(params);
+                        for (gen59_i = 0; gen59_i < gen58_items.length; ++gen59_i) {
+                            key = gen58_items[gen59_i];
                             request.input(key, params[key]);
                         }
                     }
@@ -467,7 +474,7 @@
             },
             connect: function(config) {
                 var self = this;
-                var gen60_asyncResult;
+                var gen61_asyncResult;
                 return new Promise(function(gen12_onFulfilled) {
                     self.connection = new sql.Connection(config);
                     gen12_onFulfilled(gen1_promisify(function(gen16_callback) {
@@ -482,10 +489,10 @@
         };
         if (config) {
             return function() {
-                var gen61_asyncResult;
+                var gen62_asyncResult;
                 return new Promise(function(gen12_onFulfilled) {
-                    gen12_onFulfilled(Promise.resolve(db.connect(config)).then(function(gen61_asyncResult) {
-                        gen61_asyncResult;
+                    gen12_onFulfilled(Promise.resolve(db.connect(config)).then(function(gen62_asyncResult) {
+                        gen62_asyncResult;
                         return db;
                     }));
                 });

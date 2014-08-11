@@ -7,6 +7,7 @@ describe 'mssql-orm'
   person = nil
   address = nil
   personAddress = nil
+  statements = nil
 
   config = {
     user = 'user'
@@ -60,7 +61,8 @@ describe 'mssql-orm'
 
   beforeEach
     db := mssqlOrm.db(config)!
-    db.log = false
+    statements := []
+    db.log(sql) = statements.push(r/^(insert|update)/.exec(sql).1)
 
     clearTables()!
 
@@ -137,15 +139,11 @@ describe 'mssql-orm'
 
   describe 'only saving when modified'
     bob = nil
-    statements = nil
 
     beforeEach
       bob := person {
         name = 'bob'
       }
-
-      statements := []
-      db.log(sql) = statements.push(r/^(insert|update)/.exec(sql).1)
 
     it "doesn't save unmodified entity again after insert"
       bob.save()!
@@ -228,6 +226,41 @@ describe 'mssql-orm'
       people = db.query 'select * from people_explicit_id'!
       expect(people).to.eql [{id = 1, name = 'bob'}]
 
+  describe 'saved and modified'
+    it 'inserts when created for the first time'
+      person {
+        name = 'bob'
+      }.save()!
+
+      expect(statements).to.eql ['insert']
+
+    it "doesn't save created with saved = true"
+      bob = person (saved = true) {
+        name = 'bob'
+      }
+      bob.save()!
+
+      expect(statements).to.eql []
+
+      bob.name = 'jane'
+      bob.save()!
+
+      expect(statements).to.eql ['update']
+
+    it 'updates when created with saved = true and force = true'
+      person (saved = true) {
+        name = 'bob'
+      }.save(force = true)!
+
+      expect(statements).to.eql ['update']
+
+    it 'updates when created with saved = true and modified = true'
+      person (saved = true, modified = true) {
+        name = 'bob'
+      }.save()!
+
+      expect(statements).to.eql ['update']
+
   describe 'compound keys'
     it 'can save an entity with compound keys'
       pa = personAddress {
@@ -275,16 +308,12 @@ describe 'mssql-orm'
 
     describe 'saving only when modified'
       pa = nil
-      statements = nil
 
       beforeEach
         pa := personAddress {
           personId = 12
           addressId = 34
         }
-
-        statements := []
-        db.log(sql) = statements.push(r/^(insert|update)/.exec(sql).1)
 
       it 'can save an entity with compound keys'
         pa.save()!

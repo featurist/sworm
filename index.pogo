@@ -190,17 +190,18 @@ exports.db(config) =
 
       modelPrototype = prototypeExtending (rowBase) (modelConfig)
 
-      model (obj, saved) =
+      model (obj, saved = false, modified = false) =
         row = modelPrototype(obj)
 
         if (saved)
           row.setSaved()
-          row.setNotChanged()
+          if (@not modified)
+            row.setNotChanged()
 
         row
       
       model.query (args, ...) =
-        [e <- db.query (args, ...)!, self(e, true)]
+        [e <- db.query (args, ...)!, self(e, saved = true)]
 
       model
 

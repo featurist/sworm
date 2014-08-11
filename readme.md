@@ -142,11 +142,15 @@ Any other properties or functions on the `options` object are accessible by enti
 
 The entity constructor takes an object with fields to be saved to the database.
 
-    var person = db.model({...});
+    var person = db.model({...}, [options]);
 
     var bob = person({
       name: 'bob'
     });
+
+Where options can have:
+  * `saved`: if `true` will `update` the entity (if modified) on the next `save()`, if `false` will `insert` the entity on the next `save()`. Default `false`.
+  * `modified`: if `true` (and if `saved` is true), will `update` the entity on the next `save()` regardless if it has been modified.
 
 ### Save
 
