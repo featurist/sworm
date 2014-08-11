@@ -5,11 +5,25 @@ module.exports() = {
     paramList = []
 
     if (params)
-      n = 1
-      for each @(key) in (Object.keys(params))
-        query := query.replace (@new RegExp "@#(key)\\b" 'g') "$#(n)"
-        paramList.push(params.(key))
-        ++n
+      indexedParams = {}
+
+      keys = Object.keys(params)
+      for (n = 0, n < keys.length, ++n)
+        key = keys.(n)
+        value = params.(key)
+        indexedParams.(key) = {
+          index = n + 1
+          value = value
+        }
+        paramList.push(value)
+
+      query := query.replace (@new RegExp "@([a-zA-Z_0-9]+)\\b" 'g') @(_, paramName)
+        param = indexedParams.(paramName)
+
+        if (@not param)
+          @throw @new Error "no such parameter @#(paramName)"
+
+        "$" + indexedParams.(paramName).index
 
     self.client.query (query, paramList) ^!.rows
 
