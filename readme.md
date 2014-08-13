@@ -19,25 +19,27 @@ Just write SQL, you know how.
 
 ## Example
 
-    var person = db.model({table: 'people'});
-    var address = db.model({table: 'addresses'});
+```JavaScript
+var person = db.model({table: 'people'});
+var address = db.model({table: 'addresses'});
 
-    var bob = person({
-      name: 'bob',
-      address: address({
-        address: 'Fremantle'
-      })
-    });
+var bob = person({
+  name: 'bob',
+  address: address({
+    address: 'Fremantle'
+  })
+});
 
-    bob.save()
+bob.save()
+```
 
 Produces:
 
-    -------- people ---------
-    | id | name | addressId |
-    -------------------------
-    | 11 | bob  | 22        |
-    -------------------------
+    -------- people ----------
+    | id | name | address_id |
+    --------------------------
+    | 11 | bob  | 22         |
+    --------------------------
 
     ------- addresses ------
     | id | address         |
@@ -49,49 +51,42 @@ Produces:
 
 Connect:
 
-    var mssql = require('mssql-orm');
+```JavaScript
+var mssql = require('mssql-orm');
 
-    mssql.db({
-      user: 'user',
-      password: 'password',
-      server: 'localhost',
-      database: 'databasename'
-    }).then(function (db) {
+mssql.db({
+  user: 'user',
+  password: 'password',
+  server: 'localhost',
+  database: 'databasename'
+}).then(function (db) {
 
-      var person = db.model({table: 'people'});
-      ...
-
-    });
   var person = db.model({table: 'people'});
-  var address = db.model({table: 'addresses'});
+  ...
 
-  var bob = person({
-    name: 'bob',
-    address: address({
-      address: '...'
-    })
-  });
-
-  return bob.save()
+});
+```
 
 Or define models then connect:
 
-    var mssql = require('mssql-orm');
+```JavaScript
+var mssql = require('mssql-orm');
 
-    var db = mssql.db();
+var db = mssql.db();
 
-    var person = db.model({table: 'people'});
+var person = db.model({table: 'people'});
 
-    db.connect({
-      user: 'user',
-      password: 'password',
-      server: 'localhost',
-      database: 'databasename'
-    }).then(function () {
+db.connect({
+  user: 'user',
+  password: 'password',
+  server: 'localhost',
+  database: 'databasename'
+}).then(function () {
 
-      ...
+  ...
 
-    });
+});
+```
 
 Connection options:
 
@@ -103,7 +98,9 @@ For all other connection options, see [node-mssql Configuration](https://github.
 
 Close the connection after use:
 
-    db.close()
+```JavaScript
+db.close()
+```
 
 ## Models
 
@@ -115,9 +112,11 @@ Close the connection after use:
   * `id` (`'id'`) the name of the identity column. This can be an array of id columns for compound keys.
   * `foreignKeyFor` a function that returns a foreign key field name for a member (see [Relationships](#relationships)), defaults to:
 
-        function foreignKeyFor(fieldName) {
-          return fieldName + 'Id';
-        }
+    ```JavaScript
+    function foreignKeyFor(fieldName) {
+      return fieldName + '_id';
+    }
+    ```
 
 `createEntity` is a function that can be used to create entities from the model.
 
@@ -125,28 +124,32 @@ Close the connection after use:
 
 Any other properties or functions on the `options` object are accessible by entities.
 
-    var address = db.model({
-      table: 'addresses',
+```JavaScript
+var address = db.model({
+  table: 'addresses',
 
-      function: addPerson(person) {
-        this.people = this.people || [];
-        person.address = this;
-        this.people.push(person);
-      }
-    });
+  function: addPerson(person) {
+    this.people = this.people || [];
+    person.address = this;
+    this.people.push(person);
+  }
+});
 
-    var fremantle = address({address: 'Fremantle'});
-    fremantle.addPerson(person({name: 'bob'}));
+var fremantle = address({address: 'Fremantle'});
+fremantle.addPerson(person({name: 'bob'}));
+```
 
 ## Entities
 
 The entity constructor takes an object with fields to be saved to the database.
 
-    var person = db.model({...}, [options]);
+```JavaScript
+var person = db.model({...}, [options]);
 
-    var bob = person({
-      name: 'bob'
-    });
+var bob = person({
+  name: 'bob'
+});
+```
 
 Where options can have:
   * `saved`: if `true` will `update` the entity (if modified) on the next `save()`, if `false` will `insert` the entity on the next `save()`. Default `false`.
@@ -154,7 +157,9 @@ Where options can have:
 
 ### Save
 
-    var promise = entity.save([options]);
+```JavaScript
+var promise = entity.save([options]);
+```
 
 Inserts or updates the entity into the table. If the entity already has a value for its identity column, then it is updated, if not, it is inserted.
 
@@ -164,13 +169,17 @@ Objects know when they've been modified since their last insert or update, so th
 
 ### Identity
 
-    entity.identity()
+```JavaScript
+entity.identity()
+```
 
 Returns the ID of the entity, based on the identity column specified in the model.
 
 ### Changed
 
-    entity.changed()
+```JavaScript
+entity.changed()
+```
 
 Returns true if the object has been modified since the last `save()`.
 
@@ -182,29 +191,31 @@ Entities can contain fields that are other entities. This way you can build up g
 
 When entity A contains a field that is entity B, then B will be saved first and B's ID will be set and saved with A.
 
-The foreign key of the member will be saved on the field name `memberId`. So `address` will have a foreign key of `addressId`. See the `foreignKeyFor` option in [Models](#models).
+The foreign key of the member will be saved on the field name `member_id`. So `address` will have a foreign key of `address_id`. See the `foreignKeyFor` option in [Models](#models).
 
-    var person = db.model({table: 'people'});
-    var address = db.model({table: 'addresses'});
+```JavaScript
+var person = db.model({table: 'people'});
+var address = db.model({table: 'addresses'});
 
-    var bob = person({
-      name: 'bob',
-      address: address({
-        address: "15 Rue d'Essert"
-      })
-    });
+var bob = person({
+  name: 'bob',
+  address: address({
+    address: "15 Rue d'Essert"
+  })
+});
 
-    bob.save().then(function () {
-      assert(bob.addressId == address.id);
-    });
+bob.save().then(function () {
+  assert(bob.address_id == address.id);
+});
+```
 
 In SQL:
 
-    -------- people ---------
-    | id | name | addressId |
-    -------------------------
-    | 11 | bob  | 22        |
-    -------------------------
+    -------- people ----------
+    | id | name | address_id |
+    --------------------------
+    | 11 | bob  | 22         |
+    --------------------------
 
     ------- addresses ------
     | id | address         |
@@ -218,32 +229,34 @@ When entity A contains a field that is an array that contains entities B and C. 
 
 This allows entities B and C to refer to entity A, as they would in their tables.
 
-    var person = db.model({ table: 'people' });
-    var address = db.model({ table: 'addresses' });
+```JavaScript
+var person = db.model({ table: 'people' });
+var address = db.model({ table: 'addresses' });
 
-    var bob = person({name: 'bob'});
-    var jane = person({name: 'jane'});
+var bob = person({name: 'bob'});
+var jane = person({name: 'jane'});
 
-    var essert = address({
-      address: "15 Rue d'Essert",
-      people: [bob, jane]
-    });
+var essert = address({
+  address: "15 Rue d'Essert",
+  people: [bob, jane]
+});
 
-    bob.address = essert;
-    jane.address = essert;
+bob.address = essert;
+jane.address = essert;
 
-    essert.save().then(function () {
-      // all objects saved.
-    });
+essert.save().then(function () {
+  // all objects saved.
+});
+```
 
 In SQL:
 
-    -------- people ---------
-    | id | name | addressId |
-    -------------------------
-    | 11 | bob  | 22        |
-    | 12 | jane | 22        |
-    -------------------------
+    -------- people ----------
+    | id | name | address_id |
+    --------------------------
+    | 11 | bob  | 22         |
+    | 12 | jane | 22         |
+    --------------------------
 
     ------- addresses ------
     | id | address         |
@@ -255,35 +268,37 @@ In SQL:
 
 Many-to-many is just a combination of one-to-many and many-to-one:
 
-    var person = db.model({ table: 'people' });
-    var personAddress = db.model({ table: 'people_addresses', id: ['addressId', 'personId'] });
-    var address = db.model({ table: 'addresses' });
+```JavaScript
+var person = db.model({ table: 'people' });
+var personAddress = db.model({ table: 'people_addresses', id: ['address_id', 'person_id'] });
+var address = db.model({ table: 'addresses' });
 
-    function personLivesInAddress(person, address) {
-      pa = personAddress({person: person, address: address});
+function personLivesInAddress(person, address) {
+  pa = personAddress({person: person, address: address});
 
-      person.addresses = person.addresses || [];
-      person.addresses.push(pa);
+  person.addresses = person.addresses || [];
+  person.addresses.push(pa);
 
-      address.people = address.people || [];
-      address.people.push(pa);
-    }
+  address.people = address.people || [];
+  address.people.push(pa);
+}
 
-    var bob = person({name: 'bob'});
-    var jane = person({name: 'jane'});
+var bob = person({name: 'bob'});
+var jane = person({name: 'jane'});
 
-    var fremantle = address({
-      address: "Fremantle"
-    });
-    var essert = address({
-      address: "15 Rue d'Essert"
-    });
+var fremantle = address({
+  address: "Fremantle"
+});
+var essert = address({
+  address: "15 Rue d'Essert"
+});
 
-    personLivesInAddress(bob, fremantle);
-    personLivesInAddress(jane, fremantle);
-    personLivesInAddress(jane, essert);
+personLivesInAddress(bob, fremantle);
+personLivesInAddress(jane, fremantle);
+personLivesInAddress(jane, essert);
 
-    Promise.all([essert.save(), fremantle.save()]);
+Promise.all([essert.save(), fremantle.save()]);
+```
 
 In SQL:
 
@@ -301,17 +316,19 @@ In SQL:
     | 23 | Fremantle       |
     ------------------------
 
-    --- people_addresses ---
-    | addressId | personId |
-    ------------------------
-    | 22        | 12       |
-    | 23        | 12       |
-    | 23        | 11       |
-    ------------------------
+    ---- people_addresses ----
+    | address_id | person_id |
+    --------------------------
+    | 22         | 12        |
+    | 23         | 12        |
+    | 23         | 11        |
+    --------------------------
 
 # Queries
 
-    var records = db.query(sql, [parameters]);
+```JavaScript
+var records = db.query(sql, [parameters]);
+```
 
 Where:
 
@@ -322,6 +339,8 @@ For select queries, returns an array of objects, containing the fields of each r
 
 ## Model Queries
 
-    var entities = model.query(sql, [parameters]);
+```JavaScript
+var entities = model.query(sql, [parameters]);
+```
 
 Same as `db.query()` but records returned are turned into entities of the model that can subsequently be modified and saved.
