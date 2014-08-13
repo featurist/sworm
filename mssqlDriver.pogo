@@ -19,4 +19,7 @@ module.exports() = {
 
   outputIdBeforeValues(id) = "output Inserted.#(id)"
   outputIdAfterValues(id) = ''
+
+  insertedId(rows, id) =
+    rows.0.(id)
 }

@@ -43,4 +43,7 @@ module.exports() = {
 
   outputIdBeforeValues(id) = ''
   outputIdAfterValues(id) = "returning #(id)"
+
+  insertedId(rows, id) =
+    rows.0.(id)
 }

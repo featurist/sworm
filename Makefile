@@ -1,5 +1,10 @@
-index.js: index.pogo
-	pogo -c index.pogo
+pogo_files := $(filter-out qo.pogo, $(wildcard *.pogo))
+files := $(pogo_files:.pogo=.js)
+
+all: $(files)
+
+$(files): $(pogo_files)
+	pogo -cs $(pogo_files)
 
 clean:
-	rm index.js
+	rm $(files)

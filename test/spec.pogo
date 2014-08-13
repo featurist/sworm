@@ -2,6 +2,8 @@ chai = require 'chai'
 expect = chai.expect
 chaiAsPromised = require 'chai-as-promised'
 chai.use(chaiAsPromised)
+util = require 'util'
+_ = require 'underscore'
 
 mssqlOrm = require '..'
 
@@ -59,41 +61,13 @@ describeDatabase(name, config, helpers) =
       expect(p.id).to.exist
 
       people = db.query 'select * from people'!
-      expect(people).to.eql [{id = p.id, name = 'bob', dob = null, likes_noodles = null, address_id = null}]
-
-    describe 'booleans'
-      canInsertBooleansOfValue (b) =
-        it "can insert and query booleans when #(b)"
-          p = person {
-            name = 'bob'
-            likes_noodles = b
-          }
-
-          p.save()!
-          expect(p.id).to.exist
-
-          people = db.query 'select * from people'!
-          expect(people).to.eql [{id = p.id, name = 'bob', likes_noodles = b, dob = null, address_id = null}]
-
-      canInsertBooleansOfValue (true)
-      canInsertBooleansOfValue (false)
-
-    describe 'dates'
-      canInsertDatesOfValue (d) =
-        it "can insert and query dates when #(d)"
-          p = person {
-            name = 'bob'
-            dob = d
-          }
-
-          p.save()!
-          expect(p.id).to.exist
-
-          people = db.query 'select * from people'!
-          expect(people).to.eql [{id = p.id, name = 'bob', dob = d, likes_noodles = null, address_id = null}]
-
-      canInsertDatesOfValue (@new Date(1999, 2, 13, 7, 59, 38))
-      canInsertDatesOfValue (@new Date(2013, 3, 14, 12, 54, 36))
+      expect(helpers.clean(people)).to.eql [
+        {
+          id = p.id
+          name = 'bob'
+          address_id = null
+        }
+      ]
 
     describe 'strings'
       it 'can insert with escapes'
@@ -105,7 +79,13 @@ describeDatabase(name, config, helpers) =
         expect(p.id).to.exist
 
         people = db.query 'select * from people'!
-        expect(people).to.eql [{id = p.id, name = "bob's name is 'matilda'", dob = null, likes_noodles = null, address_id = null}]
+        expect(helpers.clean(people)).to.eql [
+          {
+            id = p.id
+            name = "bob's name is 'matilda'"
+            address_id = null
+          }
+        ]
 
     describe 'only saving when modified'
       bob = nil
@@ -166,7 +146,13 @@ describeDatabase(name, config, helpers) =
       p.save()!
 
       people = db.query 'select * from people'!
-      expect(people).to.eql [{id = p.id, name = 'jane', dob = null, likes_noodles = null, address_id = null}]
+      expect(helpers.clean(people)).to.eql [
+        {
+          id = p.id
+          name = 'jane'
+          address_id = null
+        }
+      ]
 
     describe 'custom id columns'
       it 'can insert with weird_id'
@@ -180,7 +166,13 @@ describeDatabase(name, config, helpers) =
         expect(p.weird_id).to.exist
 
         people = db.query 'select * from people_weird_id'!
-        expect(people).to.eql [{weird_id = p.weird_id, name = 'bob', address_weird_id = null}]
+        expect(helpers.clean(people)).to.eql [
+          {
+            weird_id = p.weird_id
+            name = 'bob'
+            address_weird_id = null
+          }
+        ]
 
     describe 'explicitly setting id'
       it 'can insert with id'
@@ -194,7 +186,12 @@ describeDatabase(name, config, helpers) =
         p.save()!
 
         people = db.query 'select * from people_explicit_id'!
-        expect(people).to.eql [{id = 1, name = 'bob'}]
+        expect(helpers.clean(people)).to.eql [
+          {
+            id = 1
+            name = 'bob'
+          }
+        ]
 
     describe 'saved and modified'
       it 'inserts when created for the first time'
@@ -248,11 +245,12 @@ describeDatabase(name, config, helpers) =
 
         pa.save()!
 
-        expect(db.query 'select * from people_addresses'!).to.eql [
+        peopleAddresses = db.query 'select * from people_addresses'!
+        expect(helpers.clean(peopleAddresses)).to.eql [
           {
             person_id = 12
             address_id = 34
-            happy_here = null
+            rating = null
           }
         ]
 
@@ -260,27 +258,27 @@ describeDatabase(name, config, helpers) =
         pa = personAddress {
           person_id = 12
           address_id = 34
-          happy_here = false
+          rating = 1
         }
 
         pa.save()!
 
-        expect(db.query 'select * from people_addresses'!).to.eql [
+        expect(helpers.clean (db.query 'select * from people_addresses'!)).to.eql [
           {
             person_id = 12
             address_id = 34
-            happy_here = false
+            rating = 1
           }
         ]
 
-        pa.happy_here = true
+        pa.rating = 10
         pa.save()!
 
-        expect(db.query 'select * from people_addresses'!).to.eql [
+        expect(helpers.clean (db.query 'select * from people_addresses'!)).to.eql [
           {
             person_id = 12
             address_id = 34
-            happy_here = true
+            rating = 10
           }
         ]
 
@@ -303,7 +301,7 @@ describeDatabase(name, config, helpers) =
           pa.save()!
           expect(statements).to.eql ['insert']
 
-          pa.happy_here = true
+          pa.rating = 10
           pa.save()!
           expect(statements).to.eql ['insert', 'update']
 
@@ -322,7 +320,7 @@ describeDatabase(name, config, helpers) =
           }.save()!
 
           records = db.query! 'select name from people where name = @name' { name 'jane' }
-          expect(records).to.eql [
+          expect(helpers.clean (records)).to.eql [
             { name = 'jane' }
           ]
 
@@ -378,9 +376,14 @@ describeDatabase(name, config, helpers) =
         }
         bob.save()!
 
+        expect(statements).to.eql [
+          'insert'
+          'insert'
+        ]
+
         addresses = db.query 'select * from addresses'!
 
-        expect(addresses).to.eql [
+        expect(helpers.clean (addresses)).to.eql [
           {id = bob.address_id, address  "15, Rue d'Essert"}
         ]
 
@@ -398,7 +401,7 @@ describeDatabase(name, config, helpers) =
 
           addresses = db.query 'select * from addresses'!
 
-          expect(addresses).to.eql [
+          expect(helpers.clean (addresses)).to.eql [
             {id = bob.address_weird_id, address  "15, Rue d'Essert"}
           ]
 
@@ -419,8 +422,14 @@ describeDatabase(name, config, helpers) =
 
         bob.save()!
 
+        expect(statements).to.eql [
+          'insert'
+          'insert'
+          'insert'
+        ]
+
         addresses = db.query 'select * from addresses'!
-        expect(addresses).to.eql [
+        expect(helpers.clean (addresses)).to.eql [
           {id = bob.address_id, address  "15, Rue d'Essert"}
         ]
 
@@ -456,18 +465,28 @@ describeDatabase(name, config, helpers) =
         essert.save()!
         fremantle.save()!
 
+        expect(statements).to.eql [
+          'insert'
+          'insert'
+          'insert'
+          'insert'
+          'insert'
+          'insert'
+          'insert'
+        ]
+
         expect [p <- db.query 'select * from people'!, { id = p.id, name = p.name }].to.eql [
           { id = jane.id, name = 'jane' }
           { id = bob.id, name = 'bob' }
         ]
 
-        expect(db.query 'select * from people_addresses order by address_id, person_id'!).to.eql [
-          { address_id = essert.id, person_id = jane.id, happy_here = null }
-          { address_id = fremantle.id, person_id = jane.id, happy_here = null }
-          { address_id = fremantle.id, person_id = bob.id, happy_here = null }
+        expect(helpers.clean (db.query 'select * from people_addresses order by address_id, person_id'!)).to.eql [
+          { address_id = essert.id, person_id = jane.id, rating = null }
+          { address_id = fremantle.id, person_id = jane.id, rating = null }
+          { address_id = fremantle.id, person_id = bob.id, rating = null }
         ]
 
-        expect(db.query 'select * from addresses'!).to.eql [
+        expect(helpers.clean (db.query 'select * from addresses'!)).to.eql [
           { id = essert.id, address = "15 Rue d'Essert" }
           { id = fremantle.id, address = "Fremantle" }
         ]
@@ -486,7 +505,7 @@ describeDatabase(name, config, helpers) =
         bob.save()!
         expect([p <- db.query 'select * from people'!, p.name]).to.eql ['bob']
 
-describeDatabase 'mssql-orm' {
+describeDatabase 'mssql' {
   driver = 'mssql'
   config = {
     user = 'user'
@@ -505,15 +524,13 @@ describeDatabase 'mssql-orm' {
     createTable! 'people' "CREATE TABLE [dbo].[people](
                                       [id] [int] IDENTITY(1,1) NOT NULL,
                                       [name] [nvarchar](50) NOT NULL,
-                                      [dob] [datetime] NULL,
-                                      [likes_noodles] [bit] NULL,
                                       [address_id] [int] NULL
                                     )"
 
     createTable! 'people_addresses' "CREATE TABLE [dbo].[people_addresses](
                                                 [address_id] [int] NOT NULL,
                                                 [person_id] [int] NOT NULL,
-                                                [happy_here] [bit] NULL
+                                                [rating] [int] NULL
                                               )"
 
     createTable! 'addresses' "CREATE TABLE [dbo].[addresses](
@@ -531,9 +548,14 @@ describeDatabase 'mssql-orm' {
                                                  [id] [int] NOT NULL,
                                                  [name] [nvarchar](50) NOT NULL
                                                 )"
+
+  true = true
+  false = false
+
+  clean(records) = records
 }
 
-describeDatabase 'pg-orm' {
+describeDatabase 'postgres' {
   url = "postgres://localhost/gloworm"
   driver = 'pg'
 } {
@@ -545,15 +567,13 @@ describeDatabase 'pg-orm' {
     createTable! 'people' "create table if not exists people (
                              id serial NOT NULL,
                              name varchar(50) NOT NULL,
-                             dob timestamp NULL,
-                             likes_noodles boolean NULL,
                              address_id int NULL
                            )"
 
     createTable! 'people_addresses' "create table if not exists people_addresses(
                                        address_id int NOT NULL,
                                        person_id int NOT NULL,
-                                       happy_here boolean NULL
+                                       rating int NULL
                                      )"
 
     createTable! 'addresses' "create table if not exists addresses(
@@ -572,4 +592,55 @@ describeDatabase 'pg-orm' {
                                          name varchar(50) NOT NULL
                                        )"
 
+  true = true
+  false = false
+
+  clean(records) = records
+}
+
+describeDatabase 'mysql' {
+  config = {
+    user = 'user'
+    password = 'password'
+    database = 'gloworm'
+  }
+  driver = 'mysql'
+} {
+  createTables(db, tables) =
+    createTable (name, sql) =
+      tables.push(name)
+      db.query! (sql)
+
+    createTable! 'people' "create table if not exists people (
+                             id serial NOT NULL,
+                             name varchar(50) NOT NULL,
+                             address_id int NULL
+                           )"
+
+    createTable! 'people_addresses' "create table if not exists people_addresses(
+                                       address_id int NOT NULL,
+                                       person_id int NOT NULL,
+                                       rating int NULL
+                                     )"
+
+    createTable! 'addresses' "create table if not exists addresses(
+                                id serial NOT NULL,
+                                address varchar(50) NOT NULL
+                              )"
+
+    createTable! 'people_weird_id' "create table if not exists people_weird_id(
+                                      weird_id serial NOT NULL,
+                                      name varchar(50) NOT NULL,
+                                      address_weird_id int NULL
+                                    )"
+
+    createTable! 'people_explicit_id' "create table if not exists people_explicit_id(
+                                         id int NOT NULL,
+                                         name varchar(50) NOT NULL
+                                       )"
+
+  true = 1
+  false = 0
+
+  clean(records) = JSON.parse(JSON.stringify(records))
 }

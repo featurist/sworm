@@ -9,6 +9,7 @@
   "dependencies": {
     "bluebird": "^2.2.2",
     "mssql": "^1.1.1",
+    "mysql": "^2.4.2",
     "pg": "^3.4.1",
     "underscore": "^1.6.0"
   },

@@ -2,6 +2,7 @@ crypto = require 'crypto'
 _ = require 'underscore'
 mssqlDriver = require './mssqlDriver'
 pgDriver = require './pgDriver'
+mysqlDriver = require './mysqlDriver'
 
 rowBase =
   fieldsForObject(obj) = [
@@ -48,8 +49,10 @@ rowBase =
     r = obj._meta.db.query (statementString, _.pick(obj, keys))!
 
     obj.setSaved()
+
     if (@not obj._meta.compoundKey)
-      obj.(obj._meta.id) = r.0.(obj._meta.id)
+      insertedId = obj._meta.db.driver.insertedId(r, obj._meta.id)
+      obj.(obj._meta.id) = insertedId
 
     obj.setNotChanged()
 
@@ -121,14 +124,21 @@ rowBase =
 
   prototype {
     save(force = false) =
-      if (self.changed() @or force)
-        saveManyToOnes(self)!
-        if (@not self.saved())
-          insert(self)!
-        else
-          update(self)!
+      if (@not self._saving)
+        self.setSaving(true)
 
-        saveOneToManys(self)!
+        try
+          saveManyToOnes(self)!
+
+          if (self.changed() @or force)
+            if (@not self.saved())
+              insert(self)!
+            else
+              update(self)!
+
+          saveOneToManys(self)!
+        finally
+          self.setSaving(false)
 
     changed() =
       @not self._hash @or self._hash != hash(self)
@@ -141,6 +151,12 @@ rowBase =
 
     saved() =
       self._saved
+
+    setSaving(saving) =
+      if (saving)
+        Object.defineProperty(self, '_saving', value = true, configurable = true)
+      else
+        @delete self._saving
 
     setNotChanged() =
       if (self._hash)
@@ -215,6 +231,7 @@ exports.db(config) =
         ({
           mssql = mssqlDriver
           pg = pgDriver
+          mysql = mysqlDriver
         }.(config.driver))()
 
       self.driver.connect(config)!
