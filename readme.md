@@ -174,11 +174,11 @@ fremantle.addPerson(person({name: 'bob'}));
 The entity constructor takes an object with fields to be saved to the database.
 
 ```JavaScript
-var person = db.model({...}, [options]);
+var person = db.model({...});
 
 var bob = person({
   name: 'bob'
-});
+}, [options]);
 ```
 
 Where options can have:
