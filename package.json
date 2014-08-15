@@ -21,7 +21,7 @@
   },
   "scripts": {
     "test": "mocha",
-    "prepublish": "pogo -c index.pogo"
+    "prepublish": "make"
   },
   "repository": {
     "type": "git",
