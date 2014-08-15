@@ -1,6 +1,10 @@
-# MSSQL ORM
+# SWORM
 
-A very lightweight **write only** Node.js ORM for Microsoft SQL Server.
+A very lightweight **write only** Node.js ORM, with support for:
+
+* Microsoft SQL Server (MSSQL)
+* PostgreSQL
+* MySQL
 
 ## Write Only?
 
@@ -13,7 +17,7 @@ This ORM avoids some of the largest issues experienced in other ORMs:
 * configuring eager and lazy loading is tricky
 * one-to-many, many-to-one, many-to-many relationships are notoriously difficult to get right
 * lifecycle management of sessions and identity maps is rarely pleasant
-* check out the massive generated SQL
+* check out the massive generated SQL statements!
 
 Just write SQL, you know how.
 
@@ -52,13 +56,16 @@ Produces:
 Connect:
 
 ```JavaScript
-var mssql = require('mssql-orm');
+var sworm = require('sworm');
 
-mssql.db({
-  user: 'user',
-  password: 'password',
-  server: 'localhost',
-  database: 'databasename'
+sworm.db({
+  driver: 'mssql',
+  config: {
+    user: 'user',
+    password: 'password',
+    server: 'localhost',
+    database: 'databasename'
+  }
 }).then(function (db) {
 
   var person = db.model({table: 'people'});
@@ -70,17 +77,20 @@ mssql.db({
 Or define models then connect:
 
 ```JavaScript
-var mssql = require('mssql-orm');
+var sworm = require('sworm');
 
-var db = mssql.db();
+var db = sworm.db();
 
 var person = db.model({table: 'people'});
 
 db.connect({
-  user: 'user',
-  password: 'password',
-  server: 'localhost',
-  database: 'databasename'
+  driver: 'mssql',
+  config: {
+    user: 'user',
+    password: 'password',
+    server: 'localhost',
+    database: 'databasename'
+  }
 }).then(function () {
 
   ...
@@ -90,9 +100,21 @@ db.connect({
 
 Connection options:
 
-  * `log`: either `true` to log SQL statements with `console.log()`, or a function `function (sql) { ... }` for custom logging. Defaults to no logging.
+  * `driver`, one of `'mssql'`, `'mysql'` or `'pg'`.
+  * `config` connection options passed to the database driver of choice. See configuration options for: [SQL Server](https://github.com/patriksimek/node-mssql#configuration-1), [MySQL](https://github.com/felixge/node-mysql#connection-options), [PostgreSQL](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+  * `url` a connection URL passed to the postgres driver. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+  * `log`: either `true` to log SQL statements with `console.log()`
 
-For all other connection options, see [node-mssql Configuration](https://github.com/patriksimek/node-mssql#configuration-1).
+    Can also be a function for custom logging:
+
+    ```JavaScript
+    function (sql, params) {
+      // sql == 'select * from people where name = @name'
+      // params == {name: 'bob'}
+    }
+    ```
+
+    Defaults to `false`, no logging.
 
 ### Close
 
@@ -104,7 +126,9 @@ db.close()
 
 ## Models
 
-    var createEntity = db.model(options);
+```JavaScript
+var createEntity = db.model(options);
+```
 
 `options` can contain the following:
 

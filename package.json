@@ -1,7 +1,7 @@
 {
-  "name": "mssql-orm",
+  "name": "sworm",
   "version": "0.1.3",
-  "description": "an ORM for MSSQL",
+  "description": "a lightweight write-only ORM for MSSQL, MySQL, PostgreSQL",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -25,12 +25,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/featurist/mssql-orm.git"
+    "url": "https://github.com/featurist/sworm.git"
   },
   "keywords": [
-    "mssql",
+    "activerecord",
     "database",
+    "postgres",
+    "postgresql",
+    "mysql",
     "orm",
+    "mssql",
     "sqlserver",
     "sql",
     "server"
@@ -38,7 +42,7 @@
   "author": "Tim Macfarlane <timmacfarlane@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/featurist/mssql-orm/issues"
+    "url": "https://github.com/featurist/sworm/issues"
   },
-  "homepage": "https://github.com/featurist/mssql-orm"
+  "homepage": "https://github.com/featurist/sworm"
 }
