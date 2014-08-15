@@ -6,6 +6,12 @@ A very lightweight **write only** Node.js ORM, with support for:
 * PostgreSQL
 * MySQL
 
+## NPM
+
+    npm install sworm
+
+See [sworm](https://www.npmjs.org/package/sworm) in NPM.
+
 ## Write Only?
 
 The features in this module are mostly for **writing graphs of related entities**. Querying, on the other hand, is done with raw SQL so you can do it fast. See the [query API](#queries) for details.
