@@ -1,49 +1,52 @@
-pg = require 'pg'
+optionalRequire = require './optionalRequire'
 
-module.exports() = {
-  query(query, params) =
-    paramList = []
+module.exports() =
+  pg = optionalRequire 'pg'
 
-    if (params)
-      indexedParams = {}
+  {
+    query(query, params) =
+      paramList = []
 
-      keys = Object.keys(params)
-      for (n = 0, n < keys.length, ++n)
-        key = keys.(n)
-        value = params.(key)
-        indexedParams.(key) = {
-          index = n + 1
-          value = value
-        }
-        paramList.push(value)
+      if (params)
+        indexedParams = {}
 
-      query := query.replace (@new RegExp "@([a-zA-Z_0-9]+)\\b" 'g') @(_, paramName)
-        param = indexedParams.(paramName)
+        keys = Object.keys(params)
+        for (n = 0, n < keys.length, ++n)
+          key = keys.(n)
+          value = params.(key)
+          indexedParams.(key) = {
+            index = n + 1
+            value = value
+          }
+          paramList.push(value)
 
-        if (@not param)
-          @throw @new Error "no such parameter @#(paramName)"
+        query := query.replace (@new RegExp "@([a-zA-Z_0-9]+)\\b" 'g') @(_, paramName)
+          param = indexedParams.(paramName)
 
-        "$" + indexedParams.(paramName).index
+          if (@not param)
+            @throw @new Error "no such parameter @#(paramName)"
 
-    self.client.query (query, paramList) ^!.rows
+          "$" + indexedParams.(paramName).index
 
-  connect(config) =
-    promise @(result, error)
-      pg.connect(config.url) @(err, client, done)
-        if (err)
-          error(err)
-        else
-          self.client = client
-          self.done = done
-          result()
+      self.client.query (query, paramList) ^!.rows
 
-  close() =
-    if (self.done)
-      self.done()
+    connect(config) =
+      promise @(result, error)
+        pg.connect(config.url) @(err, client, done)
+          if (err)
+            error(err)
+          else
+            self.client = client
+            self.done = done
+            result()
 
-  outputIdBeforeValues(id) = ''
-  outputIdAfterValues(id) = "returning #(id)"
+    close() =
+      if (self.done)
+        self.done()
 
-  insertedId(rows, id) =
-    rows.0.(id)
-}
+    outputIdBeforeValues(id) = ''
+    outputIdAfterValues(id) = "returning #(id)"
+
+    insertedId(rows, id) =
+      rows.0.(id)
+  }

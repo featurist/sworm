@@ -1,25 +1,28 @@
-sql = require 'mssql'
+optionalRequire = require './optionalRequire'
 
-module.exports() = {
-  query(query, params) =
-    request = @new sql.Request(self.connection)
+module.exports() =
+  sql = optionalRequire 'mssql'
 
-    if (params)
-      for each @(key) in (Object.keys(params))
-        request.input(key, params.(key))
+  {
+    query(query, params) =
+      request = @new sql.Request(self.connection)
 
-    request.query (query) ^!
+      if (params)
+        for each @(key) in (Object.keys(params))
+          request.input(key, params.(key))
 
-  connect(config) =
-    self.connection := @new sql.Connection(config.config)
-    self.connection.connect(^)!
+      request.query (query) ^!
 
-  close() =
-    self.connection.close()
+    connect(config) =
+      self.connection := @new sql.Connection(config.config)
+      self.connection.connect(^)!
 
-  outputIdBeforeValues(id) = "output Inserted.#(id)"
-  outputIdAfterValues(id) = ''
+    close() =
+      self.connection.close()
 
-  insertedId(rows, id) =
-    rows.0.(id)
-}
+    outputIdBeforeValues(id) = "output Inserted.#(id)"
+    outputIdAfterValues(id) = ''
+
+    insertedId(rows, id) =
+      rows.0.(id)
+  }

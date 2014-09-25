@@ -4,75 +4,74 @@ chaiAsPromised = require 'chai-as-promised'
 chai.use(chaiAsPromised)
 util = require 'util'
 _ = require 'underscore'
+fs = require 'fs'
 
-mssqlOrm = require '..'
+sworm = require '..'
 
 describeDatabase(name, config, helpers) =
   describe (name)
-    db = nil
-    tables = []
-    person = nil
-    address = nil
-    personAddress = nil
-    statements = nil
+    describe 'missing modules'
+      moduleName = __dirname + "/../node_modules/#(helpers.driverModuleName)"
+      beforeEach
+        fs.rename(moduleName, moduleName + '.missing', ^)!
 
-    before
-      schema = mssqlOrm.db(config)!
+      afterEach
+        fs.rename(moduleName + '.missing', moduleName, ^)!
 
-      helpers.createTables(schema, tables)!
+      it 'throws an exception if the driver module is not present'
+        try
+          sworm.db(config)!
+          throw (new (Error 'expected module not found error'))
+        catch(e)
+          expect(e.message).to.contain "npm install #(helpers.driverModuleName)"
 
-    clearTables() =
-      for each @(table) in (tables)
-        db.query "delete from #(table)"!
+    context 'when connected'
+      db = nil
+      tables = []
+      person = nil
+      address = nil
+      personAddress = nil
+      statements = nil
 
-    beforeEach
-      db := mssqlOrm.db(config)!
-      statements := []
+      before
+        schema = sworm.db(config)!
 
-      db.log(sql, params) =
-        // console.log(sql, JSON.stringify(params, nil, 2))
-        match = r/^(insert|update|delete|select)/.exec(sql)
-        statements.push(match.1)
+        helpers.createTables(schema, tables)!
 
-      clearTables()!
+      clearTables() =
+        for each @(table) in (tables)
+          db.query "delete from #(table)"!
 
-      statements := []
+      beforeEach
+        db := sworm.db(config)!
+        statements := []
 
-      person := db.model (table = 'people')
-      address := db.model {
-        table = 'addresses'
+        db.log(sql, params) =
+          // console.log(sql, JSON.stringify(params, nil, 2))
+          match = r/^(insert|update|delete|select)/.exec(sql)
+          statements.push(match.1)
 
-        addPerson(person) =
-          self.people = self.people @or []
-          person.address = self
-          self.people.push(person)
-      }
-      personAddress := db.model(table = 'people_addresses', id = ['address_id', 'person_id'])
+        clearTables()!
 
-    afterEach
-      db.close()
+        statements := []
 
-    it 'can insert'
-      p = person {
-        name = 'bob'
-      }
+        person := db.model (table = 'people')
+        address := db.model {
+          table = 'addresses'
 
-      p.save()!
-      expect(p.id).to.exist
-
-      people = db.query 'select * from people'!
-      expect(helpers.clean(people)).to.eql [
-        {
-          id = p.id
-          name = 'bob'
-          address_id = null
+          addPerson(person) =
+            self.people = self.people @or []
+            person.address = self
+            self.people.push(person)
         }
-      ]
+        personAddress := db.model(table = 'people_addresses', id = ['address_id', 'person_id'])
 
-    describe 'strings'
-      it 'can insert with escapes'
+      afterEach
+        db.close()
+
+      it 'can insert'
         p = person {
-          name = "bob's name is 'matilda'"
+          name = 'bob'
         }
 
         p.save()!
@@ -82,316 +81,311 @@ describeDatabase(name, config, helpers) =
         expect(helpers.clean(people)).to.eql [
           {
             id = p.id
-            name = "bob's name is 'matilda'"
+            name = 'bob'
             address_id = null
           }
         ]
 
-    describe 'only saving when modified'
-      bob = nil
+      describe 'strings'
+        it 'can insert with escapes'
+          p = person {
+            name = "bob's name is 'matilda'"
+          }
 
-      beforeEach
-        bob := person {
-          name = 'bob'
-        }
+          p.save()!
+          expect(p.id).to.exist
 
-      it "doesn't save unmodified entity again after insert"
-        bob.save()!
-        expect(statements).to.eql ['insert']
-        bob.save()!
-        expect(statements).to.eql ['insert']
+          people = db.query 'select * from people'!
+          expect(helpers.clean(people)).to.eql [
+            {
+              id = p.id
+              name = "bob's name is 'matilda'"
+              address_id = null
+            }
+          ]
 
-      it "doesn't save unmodified entity again after update"
-        bob.save()!
-        expect(statements).to.eql ['insert']
+      describe 'only saving when modified'
+        bob = nil
 
-        bob.name = 'jane'
-        bob.save()!
-        expect(statements).to.eql ['insert', 'update']
+        beforeEach
+          bob := person {
+            name = 'bob'
+          }
 
-        bob.save()!
-        expect(statements).to.eql ['insert', 'update']
+        it "doesn't save unmodified entity again after insert"
+          bob.save()!
+          expect(statements).to.eql ['insert']
+          bob.save()!
+          expect(statements).to.eql ['insert']
 
-      it "can force an update"
-        bob.save()!
-        expect(statements).to.eql ['insert']
+        it "doesn't save unmodified entity again after update"
+          bob.save()!
+          expect(statements).to.eql ['insert']
 
-        bob.name = 'jane'
-        bob.save()!
-        expect(statements).to.eql ['insert', 'update']
+          bob.name = 'jane'
+          bob.save()!
+          expect(statements).to.eql ['insert', 'update']
 
-        bob.save(force = true)!
-        expect(statements).to.eql ['insert', 'update', 'update']
+          bob.save()!
+          expect(statements).to.eql ['insert', 'update']
 
-      it "doesn't update after entity taken from model query"
-        bob.save()!
-        expect(statements).to.eql ['insert']
+        it "can force an update"
+          bob.save()!
+          expect(statements).to.eql ['insert']
 
-        savedBob = person.query 'select * from people'!.0
-        savedBob.save()!
-        expect(statements).to.eql ['insert', 'select']
+          bob.name = 'jane'
+          bob.save()!
+          expect(statements).to.eql ['insert', 'update']
 
-        savedBob.name = 'jane'
-        savedBob.save()!
-        expect(statements).to.eql ['insert', 'select', 'update']
+          bob.save(force = true)!
+          expect(statements).to.eql ['insert', 'update', 'update']
 
-    it 'can save and update'
-      p = person {
-        name = 'bob'
-      }
+        it "doesn't update after entity taken from model query"
+          bob.save()!
+          expect(statements).to.eql ['insert']
 
-      p.save()!
+          savedBob = person.query 'select * from people'!.0
+          savedBob.save()!
+          expect(statements).to.eql ['insert', 'select']
 
-      p.name = 'jane'
-      p.save()!
+          savedBob.name = 'jane'
+          savedBob.save()!
+          expect(statements).to.eql ['insert', 'select', 'update']
 
-      people = db.query 'select * from people'!
-      expect(helpers.clean(people)).to.eql [
-        {
-          id = p.id
-          name = 'jane'
-          address_id = null
-        }
-      ]
-
-    describe 'custom id columns'
-      it 'can insert with weird_id'
-        personWeirdId = db.model (table = 'people_weird_id', id = 'weird_id')
-
-        p = personWeirdId {
+      it 'can save and update'
+        p = person {
           name = 'bob'
         }
 
         p.save()!
-        expect(p.weird_id).to.exist
 
-        people = db.query 'select * from people_weird_id'!
+        p.name = 'jane'
+        p.save()!
+
+        people = db.query 'select * from people'!
         expect(helpers.clean(people)).to.eql [
           {
-            weird_id = p.weird_id
-            name = 'bob'
-            address_weird_id = null
+            id = p.id
+            name = 'jane'
+            address_id = null
           }
         ]
 
-    describe 'explicitly setting id'
-      it 'can insert with id'
-        personExplicitId = db.model (table = 'people_explicit_id')
+      describe 'custom id columns'
+        it 'can insert with weird_id'
+          personWeirdId = db.model (table = 'people_weird_id', id = 'weird_id')
 
-        p = personExplicitId {
-          id = 1
-          name = 'bob'
-        }
+          p = personWeirdId {
+            name = 'bob'
+          }
 
-        p.save()!
+          p.save()!
+          expect(p.weird_id).to.exist
 
-        people = db.query 'select * from people_explicit_id'!
-        expect(helpers.clean(people)).to.eql [
-          {
+          people = db.query 'select * from people_weird_id'!
+          expect(helpers.clean(people)).to.eql [
+            {
+              weird_id = p.weird_id
+              name = 'bob'
+              address_weird_id = null
+            }
+          ]
+
+      describe 'explicitly setting id'
+        it 'can insert with id'
+          personExplicitId = db.model (table = 'people_explicit_id')
+
+          p = personExplicitId {
             id = 1
             name = 'bob'
           }
-        ]
 
-    describe 'saved and modified'
-      it 'inserts when created for the first time'
-        person {
-          name = 'bob'
-        }.save()!
+          p.save()!
 
-        expect(statements).to.eql ['insert']
+          people = db.query 'select * from people_explicit_id'!
+          expect(helpers.clean(people)).to.eql [
+            {
+              id = 1
+              name = 'bob'
+            }
+          ]
 
-      it "doesn't save created with saved = true"
-        bob = person (saved = true) {
-          name = 'bob'
-        }
-        bob.save()!
-
-        expect(statements).to.eql []
-
-        bob.name = 'jane'
-        bob.id = 1
-        bob.save()!
-
-        expect(statements).to.eql ['update']
-
-      it 'updates when created with saved = true and force = true'
-        person (saved = true) {
-          id = 1
-          name = 'bob'
-        }.save(force = true)!
-
-        expect(statements).to.eql ['update']
-
-      it 'updates when created with saved = true and modified = true'
-        person (saved = true, modified = true) {
-          id = 1
-          name = 'bob'
-        }.save()!
-
-        expect(statements).to.eql ['update']
-
-      it 'throws if no id on update'
-        expect(person (saved = true, modified = true) {
-          name = 'bob'
-        }.save()).to.eventually.be.rejectedWith ('entity must have id to be updated')!
-
-    describe 'compound keys'
-      it 'can save an entity with compound keys'
-        pa = personAddress {
-          person_id = 12
-          address_id = 34
-        }
-
-        pa.save()!
-
-        peopleAddresses = db.query 'select * from people_addresses'!
-        expect(helpers.clean(peopleAddresses)).to.eql [
-          {
-            person_id = 12
-            address_id = 34
-            rating = null
-          }
-        ]
-
-      it 'can update an entity with compound keys'
-        pa = personAddress {
-          person_id = 12
-          address_id = 34
-          rating = 1
-        }
-
-        pa.save()!
-
-        expect(helpers.clean (db.query 'select * from people_addresses'!)).to.eql [
-          {
-            person_id = 12
-            address_id = 34
-            rating = 1
-          }
-        ]
-
-        pa.rating = 10
-        pa.save()!
-
-        expect(helpers.clean (db.query 'select * from people_addresses'!)).to.eql [
-          {
-            person_id = 12
-            address_id = 34
-            rating = 10
-          }
-        ]
-
-      describe 'saving only when modified'
-        pa = nil
-
-        beforeEach
-          pa := personAddress {
-            person_id = 12
-            address_id = 34
-          }
-
-        it 'can save an entity with compound keys'
-          pa.save()!
-          expect(statements).to.eql ['insert']
-          pa.save()!
-          expect(statements).to.eql ['insert']
-
-        it 'can update an entity with compound keys'
-          pa.save()!
-          expect(statements).to.eql ['insert']
-
-          pa.rating = 10
-          pa.save()!
-          expect(statements).to.eql ['insert', 'update']
-
-          pa.save()!
-          expect(statements).to.eql ['insert', 'update']
-
-    describe 'queries'
-      describe 'parameterised queries'
-        it 'can pass parameters to a query'
+      describe 'saved and modified'
+        it 'inserts when created for the first time'
           person {
             name = 'bob'
           }.save()!
 
-          person {
-            name = 'jane'
-          }.save()!
+          expect(statements).to.eql ['insert']
 
-          records = db.query! 'select name from people where name = @name' { name 'jane' }
-          expect(helpers.clean (records)).to.eql [
-            { name = 'jane' }
-          ]
-
-      describe 'model queries'
-        it 'can pass parameters to a query'
-          person {
-            name = 'bob'
-          }.save()!
-
-          person {
-            name = 'jane'
-          }.save()!
-
-          records = person.query! 'select name from people where name = @name' { name 'jane' }
-          expect [p <- records, {name = p.name}].to.eql [
-            { name = 'jane' }
-          ]
-
-        it 'entites are returned from query and can be modified and saved'
-          bob = person {
+        it "doesn't save created with saved = true"
+          bob = person (saved = true) {
             name = 'bob'
           }
           bob.save()!
 
-          jane = person {
-            name = 'jane'
+          expect(statements).to.eql []
+
+          bob.name = 'jane'
+          bob.id = 1
+          bob.save()!
+
+          expect(statements).to.eql ['update']
+
+        it 'updates when created with saved = true and force = true'
+          person (saved = true) {
+            id = 1
+            name = 'bob'
+          }.save(force = true)!
+
+          expect(statements).to.eql ['update']
+
+        it 'updates when created with saved = true and modified = true'
+          person (saved = true, modified = true) {
+            id = 1
+            name = 'bob'
+          }.save()!
+
+          expect(statements).to.eql ['update']
+
+        it 'throws if no id on update'
+          expect(person (saved = true, modified = true) {
+            name = 'bob'
+          }.save()).to.eventually.be.rejectedWith ('entity must have id to be updated')!
+
+      describe 'compound keys'
+        it 'can save an entity with compound keys'
+          pa = personAddress {
+            person_id = 12
+            address_id = 34
           }
-          jane.save()!
 
-          people = person.query 'select * from people'!
+          pa.save()!
 
-          expect([p <- people, p.name]).to.eql [
-            'bob'
-            'jane'
+          peopleAddresses = db.query 'select * from people_addresses'!
+          expect(helpers.clean(peopleAddresses)).to.eql [
+            {
+              person_id = 12
+              address_id = 34
+              rating = null
+            }
           ]
 
-          people.0.save()!
-          people.1.name = 'jenifer'
-          people.1.save()!
+        it 'can update an entity with compound keys'
+          pa = personAddress {
+            person_id = 12
+            address_id = 34
+            rating = 1
+          }
 
-          expect([p <- db.query 'select * from people'!, p.name]).to.eql [
-            'bob'
-            'jenifer'
+          pa.save()!
+
+          expect(helpers.clean (db.query 'select * from people_addresses'!)).to.eql [
+            {
+              person_id = 12
+              address_id = 34
+              rating = 1
+            }
           ]
 
-    describe 'foreign keys'
-      it 'can save a many to one relationship'
-        bob = person {
-          name = 'bob'
-          address = address {
-            address = "15, Rue d'Essert"
-          }
-        }
-        bob.save()!
+          pa.rating = 10
+          pa.save()!
 
-        expect(statements).to.eql [
-          'insert'
-          'insert'
-        ]
+          expect(helpers.clean (db.query 'select * from people_addresses'!)).to.eql [
+            {
+              person_id = 12
+              address_id = 34
+              rating = 10
+            }
+          ]
 
-        addresses = db.query 'select * from addresses'!
+        describe 'saving only when modified'
+          pa = nil
 
-        expect(helpers.clean (addresses)).to.eql [
-          {id = bob.address_id, address  "15, Rue d'Essert"}
-        ]
+          beforeEach
+            pa := personAddress {
+              person_id = 12
+              address_id = 34
+            }
 
-      describe 'custom foreign keys'
-        it 'can save a many to one relationship with a custom foreign key'
-          personWeirdId = db.model (table = 'people_weird_id', id = 'weird_id', foreignKeyFor (x) = x + '_weird_id')
+          it 'can save an entity with compound keys'
+            pa.save()!
+            expect(statements).to.eql ['insert']
+            pa.save()!
+            expect(statements).to.eql ['insert']
 
-          bob = personWeirdId {
+          it 'can update an entity with compound keys'
+            pa.save()!
+            expect(statements).to.eql ['insert']
+
+            pa.rating = 10
+            pa.save()!
+            expect(statements).to.eql ['insert', 'update']
+
+            pa.save()!
+            expect(statements).to.eql ['insert', 'update']
+
+      describe 'queries'
+        describe 'parameterised queries'
+          it 'can pass parameters to a query'
+            person {
+              name = 'bob'
+            }.save()!
+
+            person {
+              name = 'jane'
+            }.save()!
+
+            records = db.query! 'select name from people where name = @name' { name 'jane' }
+            expect(helpers.clean (records)).to.eql [
+              { name = 'jane' }
+            ]
+
+        describe 'model queries'
+          it 'can pass parameters to a query'
+            person {
+              name = 'bob'
+            }.save()!
+
+            person {
+              name = 'jane'
+            }.save()!
+
+            records = person.query! 'select name from people where name = @name' { name 'jane' }
+            expect [p <- records, {name = p.name}].to.eql [
+              { name = 'jane' }
+            ]
+
+          it 'entites are returned from query and can be modified and saved'
+            bob = person {
+              name = 'bob'
+            }
+            bob.save()!
+
+            jane = person {
+              name = 'jane'
+            }
+            jane.save()!
+
+            people = person.query 'select * from people'!
+
+            expect([p <- people, p.name]).to.eql [
+              'bob'
+              'jane'
+            ]
+
+            people.0.save()!
+            people.1.name = 'jenifer'
+            people.1.save()!
+
+            expect([p <- db.query 'select * from people'!, p.name]).to.eql [
+              'bob'
+              'jenifer'
+            ]
+
+      describe 'foreign keys'
+        it 'can save a many to one relationship'
+          bob = person {
             name = 'bob'
             address = address {
               address = "15, Rue d'Essert"
@@ -399,101 +393,124 @@ describeDatabase(name, config, helpers) =
           }
           bob.save()!
 
+          expect(statements).to.eql [
+            'insert'
+            'insert'
+          ]
+
           addresses = db.query 'select * from addresses'!
 
           expect(helpers.clean (addresses)).to.eql [
-            {id = bob.address_weird_id, address  "15, Rue d'Essert"}
+            {id = bob.address_id, address  "15, Rue d'Essert"}
           ]
 
-      it 'can save a one to many relationship'
-        rueDEssert = address {
-          address = "15, Rue d'Essert"
-        }
+        describe 'custom foreign keys'
+          it 'can save a many to one relationship with a custom foreign key'
+            personWeirdId = db.model (table = 'people_weird_id', id = 'weird_id', foreignKeyFor (x) = x + '_weird_id')
 
-        bob = person {
-          name = 'bob'
-        }
-        rueDEssert.addPerson(bob)
+            bob = personWeirdId {
+              name = 'bob'
+              address = address {
+                address = "15, Rue d'Essert"
+              }
+            }
+            bob.save()!
 
-        jane = person {
-          name = 'jane'
-        }
-        rueDEssert.addPerson(jane)
+            addresses = db.query 'select * from addresses'!
 
-        bob.save()!
+            expect(helpers.clean (addresses)).to.eql [
+              {id = bob.address_weird_id, address  "15, Rue d'Essert"}
+            ]
 
-        expect(statements).to.eql [
-          'insert'
-          'insert'
-          'insert'
-        ]
+        it 'can save a one to many relationship'
+          rueDEssert = address {
+            address = "15, Rue d'Essert"
+          }
 
-        addresses = db.query 'select * from addresses'!
-        expect(helpers.clean (addresses)).to.eql [
-          {id = bob.address_id, address  "15, Rue d'Essert"}
-        ]
+          bob = person {
+            name = 'bob'
+          }
+          rueDEssert.addPerson(bob)
 
-        expect([p <- db.query 'select * from people order by name'!, {name = p.name, address_id = p.address_id}]).to.eql [
-          { name = 'bob', address_id = rueDEssert.id }
-          { name = 'jane', address_id = rueDEssert.id }
-        ]
+          jane = person {
+            name = 'jane'
+          }
+          rueDEssert.addPerson(jane)
 
-      it 'can have a many to many relationship'
-        (person) livesIn (address) =
-          pa = personAddress {person = person, address = address}
+          bob.save()!
 
-          person.addresses = person.addresses @or []
-          person.addresses.push(pa)
+          expect(statements).to.eql [
+            'insert'
+            'insert'
+            'insert'
+          ]
 
-          address.people = address.people @or []
-          address.people.push(pa)
+          addresses = db.query 'select * from addresses'!
+          expect(helpers.clean (addresses)).to.eql [
+            {id = bob.address_id, address  "15, Rue d'Essert"}
+          ]
 
-        bob = person {name = 'bob'}
-        jane = person {name = 'jane'}
+          expect([p <- db.query 'select * from people order by name'!, {name = p.name, address_id = p.address_id}]).to.eql [
+            { name = 'bob', address_id = rueDEssert.id }
+            { name = 'jane', address_id = rueDEssert.id }
+          ]
 
-        fremantle = address {
-          address = "Fremantle"
-        }
-        essert = address {
-          address = "15 Rue d'Essert"
-        }
+        it 'can have a many to many relationship'
+          (person) livesIn (address) =
+            pa = personAddress {person = person, address = address}
 
-        bob @livesIn fremantle
-        jane @livesIn fremantle
-        jane @livesIn essert
+            person.addresses = person.addresses @or []
+            person.addresses.push(pa)
 
-        essert.save()!
-        fremantle.save()!
+            address.people = address.people @or []
+            address.people.push(pa)
 
-        expect(statements).to.eql [
-          'insert'
-          'insert'
-          'insert'
-          'insert'
-          'insert'
-          'insert'
-          'insert'
-        ]
+          bob = person {name = 'bob'}
+          jane = person {name = 'jane'}
 
-        expect [p <- db.query 'select * from people'!, { id = p.id, name = p.name }].to.eql [
-          { id = jane.id, name = 'jane' }
-          { id = bob.id, name = 'bob' }
-        ]
+          fremantle = address {
+            address = "Fremantle"
+          }
+          essert = address {
+            address = "15 Rue d'Essert"
+          }
 
-        expect(helpers.clean (db.query 'select * from people_addresses order by address_id, person_id'!)).to.eql [
-          { address_id = essert.id, person_id = jane.id, rating = null }
-          { address_id = fremantle.id, person_id = jane.id, rating = null }
-          { address_id = fremantle.id, person_id = bob.id, rating = null }
-        ]
+          bob @livesIn fremantle
+          jane @livesIn fremantle
+          jane @livesIn essert
 
-        expect(helpers.clean (db.query 'select * from addresses'!)).to.eql [
-          { id = essert.id, address = "15 Rue d'Essert" }
-          { id = fremantle.id, address = "Fremantle" }
-        ]
+          essert.save()!
+          fremantle.save()!
+
+          expect(statements).to.eql [
+            'insert'
+            'insert'
+            'insert'
+            'insert'
+            'insert'
+            'insert'
+            'insert'
+          ]
+
+          expect [p <- db.query 'select * from people'!, { id = p.id, name = p.name }].to.eql [
+            { id = jane.id, name = 'jane' }
+            { id = bob.id, name = 'bob' }
+          ]
+
+          expect(helpers.clean (db.query 'select * from people_addresses order by address_id, person_id'!)).to.eql [
+            { address_id = essert.id, person_id = jane.id, rating = null }
+            { address_id = fremantle.id, person_id = jane.id, rating = null }
+            { address_id = fremantle.id, person_id = bob.id, rating = null }
+          ]
+
+          expect(helpers.clean (db.query 'select * from addresses'!)).to.eql [
+            { id = essert.id, address = "15 Rue d'Essert" }
+            { id = fremantle.id, address = "Fremantle" }
+          ]
 
     describe 'connection'
       it 'can define models before connecting to database'
-        schema = mssqlOrm.db()
+        schema = sworm.db()
         personModel = schema.model (table = 'people')
 
         bob = personModel {
@@ -503,7 +520,7 @@ describeDatabase(name, config, helpers) =
         schema.connect (config)!
 
         bob.save()!
-        expect([p <- db.query 'select * from people'!, p.name]).to.eql ['bob']
+        expect([p <- schema.query 'select * from people'!, p.name]).to.eql ['bob']
 
 describeDatabase 'mssql' {
   driver = 'mssql'
@@ -553,6 +570,8 @@ describeDatabase 'mssql' {
   false = false
 
   clean(records) = records
+
+  driverModuleName = 'mssql'
 }
 
 describeDatabase 'postgres' {
@@ -596,6 +615,8 @@ describeDatabase 'postgres' {
   false = false
 
   clean(records) = records
+
+  driverModuleName = 'pg'
 }
 
 describeDatabase 'mysql' {
@@ -643,4 +664,6 @@ describeDatabase 'mysql' {
   false = 0
 
   clean(records) = JSON.parse(JSON.stringify(records))
+
+  driverModuleName = 'mysql'
 }

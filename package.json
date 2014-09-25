@@ -8,16 +8,16 @@
   },
   "dependencies": {
     "bluebird": "^2.2.2",
-    "mssql": "^1.1.1",
-    "mysql": "^2.4.2",
-    "pg": "^3.4.1",
     "underscore": "^1.6.0"
   },
   "devDependencies": {
     "chai": "^1.9.1",
     "chai-as-promised": "^4.1.1",
     "mocha": "^1.21.4",
-    "pogo": "^0.9.4"
+    "pogo": "^0.9.4",
+    "mssql": "^1.1.1",
+    "mysql": "^2.4.2",
+    "pg": "^3.4.1"
   },
   "scripts": {
     "test": "mocha",

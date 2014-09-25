@@ -12,10 +12,12 @@
         });
     };
     var self = this;
-    var pg;
-    pg = require("pg");
+    var optionalRequire;
+    optionalRequire = require("./optionalRequire");
     module.exports = function() {
         var self = this;
+        var pg;
+        pg = optionalRequire("pg");
         return {
             query: function(query, params) {
                 var self = this;

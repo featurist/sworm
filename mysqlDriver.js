@@ -12,10 +12,12 @@
         });
     };
     var self = this;
-    var mysql;
-    mysql = require("mysql");
+    var optionalRequire;
+    optionalRequire = require("./optionalRequire");
     module.exports = function() {
         var self = this;
+        var mysql;
+        mysql = optionalRequire("mysql");
         return {
             query: function(query, params) {
                 var self = this;

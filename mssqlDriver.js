@@ -12,10 +12,12 @@
         });
     };
     var self = this;
-    var sql;
-    sql = require("mssql");
+    var optionalRequire;
+    optionalRequire = require("./optionalRequire");
     module.exports = function() {
         var self = this;
+        var sql;
+        sql = optionalRequire("mssql");
         return {
             query: function(query, params) {
                 var self = this;
