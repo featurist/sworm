@@ -455,6 +455,43 @@ describeDatabase(name, config, helpers) =
             { name = 'jane', address_id = rueDEssert.id }
           ]
 
+        it 'can save a one to many relationship with function'
+          bob = nil
+          jane = nil
+
+          rueDEssert = address {
+            address = "15, Rue d'Essert"
+
+            people () = [
+              bob := person {
+                name = 'bob'
+                address = self
+              }
+              jane := person {
+                name = 'jane'
+                address = self
+              }
+            ]
+          }
+
+          rueDEssert.save()!
+
+          expect(statements).to.eql [
+            'insert'
+            'insert'
+            'insert'
+          ]
+
+          addresses = db.query 'select * from addresses'!
+          expect(helpers.clean (addresses)).to.eql [
+            {id = bob.address_id, address  "15, Rue d'Essert"}
+          ]
+
+          expect([p <- db.query 'select * from people order by name'!, {name = p.name, address_id = p.address_id}]).to.eql [
+            { name = 'bob', address_id = rueDEssert.id }
+            { name = 'jane', address_id = rueDEssert.id }
+          ]
+
         it 'can have a many to many relationship'
           (person) livesIn (address) =
             pa = personAddress {person = person, address = address}

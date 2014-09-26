@@ -82,8 +82,16 @@ rowBase =
     obj._meta.db.query (statementString, _.pick(obj, keys))!
     obj.setNotChanged()
 
+  foreignField(obj, field) =
+    v = obj.(field)
+    if (v :: Function)
+      (obj.(field))()
+    else
+      v
+
   saveManyToOne(obj, field) =
-    value = obj.(field)
+    value = foreignField(obj, field)
+
     if (@not (value :: Array))
       value.save()!
       foreignId =
@@ -101,7 +109,7 @@ rowBase =
   ]
 
   saveOneToMany(obj, field) =
-    items = obj.(field)
+    items = foreignField(obj, field)
     if (items :: Array)
       [
         item <- items

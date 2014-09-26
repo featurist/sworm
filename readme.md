@@ -285,6 +285,29 @@ essert.save().then(function () {
 });
 ```
 
+Alternatively, we can return the people in the address using a function. When the address is saved, the `people` function will be called with the owner address as `this`, then we can set the foreign key for the people.
+
+```JavaScript
+var person = db.model({ table: 'people' });
+var address = db.model({ table: 'addresses' });
+
+var essert = address({
+  address: "15 Rue d'Essert",
+  people: function() {
+    return [
+      person({ name: 'bob', address: this }),
+      person({ name: 'jane', address: this })
+    ];
+  }
+});
+
+essert.save().then(function () {
+  // all objects saved.
+});
+```
+
+Notice that whether we use an array or a function, the field itself is never saved to the database, only the entities inside the array.
+
 In SQL:
 
     -------- people ----------

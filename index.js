@@ -61,7 +61,7 @@
     pgDriver = require("./pgDriver");
     mysqlDriver = require("./mysqlDriver");
     rowBase = function() {
-        var fieldsForObject, foreignFieldsForObject, insert, update, saveManyToOne, saveManyToOnes, saveOneToMany, saveOneToManys, hash;
+        var fieldsForObject, foreignFieldsForObject, insert, update, foreignField, saveManyToOne, saveManyToOnes, saveOneToMany, saveOneToManys, hash;
         fieldsForObject = function(obj) {
             return function() {
                 var gen2_results, gen3_items, gen4_i, key;
@@ -214,10 +214,19 @@
                 }));
             });
         };
+        foreignField = function(obj, field) {
+            var v;
+            v = obj[field];
+            if (v instanceof Function) {
+                return obj[field]();
+            } else {
+                return v;
+            }
+        };
         saveManyToOne = function(obj, field) {
             var value, gen24_asyncResult, foreignId;
             return new Promise(function(gen9_onFulfilled) {
-                value = obj[field];
+                value = foreignField(obj, field);
                 gen9_onFulfilled(Promise.resolve(function() {
                     if (!(value instanceof Array)) {
                         return new Promise(function(gen9_onFulfilled) {
@@ -255,7 +264,7 @@
         saveOneToMany = function(obj, field) {
             var items, gen30_asyncResult;
             return new Promise(function(gen9_onFulfilled) {
-                items = obj[field];
+                items = foreignField(obj, field);
                 gen9_onFulfilled(Promise.resolve(function() {
                     if (items instanceof Array) {
                         return new Promise(function(gen9_onFulfilled) {
