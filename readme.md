@@ -396,6 +396,12 @@ Where:
 
 For select queries, returns an array of objects, containing the fields of each record.
 
+## Stored Procedure Example
+
+```JavaScript
+db.query('myProcName @param1, @param2', {param1: 'a', param2: 'b'});
+```
+
 ## Model Queries
 
 ```JavaScript
