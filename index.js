@@ -15,7 +15,9 @@
                         completed++;
                         if (completed == items.length && !wasError) {
                             var sortedResults = [];
-                            indexes.sort();
+                            indexes.sort(function(a, b) {
+                                return a - b;
+                            });
                             for (n = 0; n < indexes.length; n++) {
                                 if (areRanges) {
                                     sortedResults.push.apply(sortedResults, results[indexes[n]]);
@@ -48,6 +50,7 @@
             return o;
         }
         derive.prototype = p;
+        constructor.prototype.constructor = derive;
         return derive;
     };
     var prototypeExtending = function(p, obj) {

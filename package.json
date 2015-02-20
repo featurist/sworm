@@ -7,17 +7,17 @@
     "test": "test"
   },
   "dependencies": {
-    "bluebird": "^2.2.2",
-    "underscore": "^1.6.0"
+    "bluebird": "2.9.12",
+    "underscore": "1.8.1"
   },
   "devDependencies": {
-    "chai": "^1.9.1",
-    "chai-as-promised": "^4.1.1",
-    "mocha": "^1.21.4",
-    "pogo": "^0.9.4",
-    "mssql": "^1.1.1",
-    "mysql": "^2.4.2",
-    "pg": "^3.4.1"
+    "chai": "2.0.0",
+    "chai-as-promised": "4.2.0",
+    "mocha": "2.1.0",
+    "mssql": "2.1.0",
+    "mysql": "2.5.4",
+    "pg": "4.2.0",
+    "pogo": "0.9.10"
   },
   "scripts": {
     "test": "mocha",
