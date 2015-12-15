@@ -13,7 +13,7 @@
   "devDependencies": {
     "chai": "2.0.0",
     "chai-as-promised": "4.2.0",
-    "mocha": "2.1.0",
+    "mocha": "2.3.4",
     "mssql": "2.1.0",
     "mysql": "2.5.4",
     "pg": "4.2.0",

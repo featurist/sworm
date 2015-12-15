@@ -5,6 +5,7 @@ A very lightweight **write only** Node.js ORM, with support for:
 * Microsoft SQL Server (MSSQL)
 * PostgreSQL
 * MySQL
+* Oracle DB
 
 ## NPM
 
@@ -15,6 +16,7 @@ Then install a database driver, one of:
     npm install mssql
     npm install pg
     npm install mysql
+    npm install oracledb
 
 See [sworm](https://www.npmjs.org/package/sworm) in NPM.
 

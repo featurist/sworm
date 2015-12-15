@@ -1,3 +1,5 @@
+debug = (require 'debug')('sworm')
+
 chai = require 'chai'
 expect = chai.expect
 chaiAsPromised = require 'chai-as-promised'
@@ -7,6 +9,9 @@ _ = require 'underscore'
 fs = require 'fs'
 
 sworm = require '..'
+
+it 'throws exception if no driver is specified or found'
+  expect(sworm.db({driver = 'blah'})).to.eventually.be.rejectedWith('no such driver: `blah''')
 
 describeDatabase(name, config, helpers) =
   describe (name)
@@ -46,8 +51,8 @@ describeDatabase(name, config, helpers) =
         db := sworm.db(config)!
         statements := []
 
-        db.log(sql, params) =
-          // console.log(sql, JSON.stringify(params, nil, 2))
+        db.log(sql, params, results) =
+          debug(sql, params, results)
           match = r/^(insert|update|delete|select)/.exec(sql)
           statements.push(match.1)
 
@@ -703,4 +708,75 @@ describeDatabase 'mysql' {
   clean(records) = JSON.parse(JSON.stringify(records))
 
   driverModuleName = 'mysql'
+}
+
+lowercaseObject (obj) =
+  r = {}
+
+  for each @(key) in (Object.keys(obj))
+    r.(key) = obj.(key)
+
+  r
+
+describeDatabase 'oracle' {
+  config = {
+    user = 'system'
+    password = 'oracle'
+    connectString = "docker/XE"
+  }
+  driver = 'oracle'
+} {
+  createTables(db, tables) =
+    createTable (name, id, sql, noAutoId) =
+      tables.push(name)
+      db.query! ("BEGIN EXECUTE IMMEDIATE 'DROP TABLE #(name)'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;")
+      db.query! ("BEGIN EXECUTE IMMEDIATE 'DROP SEQUENCE #(name)_seq'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;")
+      if (@not noAutoId)
+        db.query! "CREATE SEQUENCE #(name)_seq"
+
+      db.query! (sql)
+      if (@not noAutoId)
+        db.query! "create or replace trigger #(name)_id
+                   before insert on #(name)
+                   for each row
+                   begin
+                     select #(name)_seq.nextval
+                     into :new.#(id)
+                     from dual;
+                   end;"
+
+    createTable! 'people' 'id' 'create table people (
+                                  id number primary key,
+                                  name varchar2(50) NOT NULL,
+                                  address_id number NULL
+                                )'
+
+    createTable! 'people_addresses' 'address_id' 'create table people_addresses(
+                                                    address_id int NOT NULL,
+                                                    person_id int NOT NULL,
+                                                    rating int NULL
+                                                  )' (true)
+
+    createTable! 'addresses' 'id' 'create table addresses(
+                                     id number primary key,
+                                     address varchar2(50) NOT NULL
+                                   )'
+
+    createTable! 'people_weird_id' 'weird_id' 'create table people_weird_id(
+                                                 weird_id number primary key,
+                                                 name varchar2(50) NOT NULL,
+                                                 address_weird_id int NULL
+                                               )'
+
+    createTable! 'people_explicit_id' 'id' 'create table people_explicit_id(
+                                              id int NOT NULL,
+                                              name varchar2(50) NOT NULL
+                                            )'
+
+  true = 1
+  false = 0
+
+  clean(records) = [r <- records, lowercaseObject(r)]
+
+  driverModuleName = 'oracledb'
 }

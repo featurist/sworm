@@ -3,6 +3,10 @@ _ = require 'underscore'
 mssqlDriver = require './mssqlDriver'
 pgDriver = require './pgDriver'
 mysqlDriver = require './mysqlDriver'
+oracleDriver = require './oracleDriver'
+
+debugQuery = (require 'debug')('sworm')
+debugResults = (require 'debug')('sworm:results')
 
 rowBase =
   fieldsForObject(obj) = [
@@ -46,7 +50,12 @@ rowBase =
                          values (#(values))
                          #(outputId.afterValues())"
 
-    r = obj._meta.db.query (statementString, _.pick(obj, keys))!
+    params = _.pick(obj, keys)
+
+    if (obj._meta.db.driver.outputIdKeys @and @not obj._meta.compoundKey)
+      params := _.extend(params, obj._meta.db.driver.outputIdKeys(obj._meta.idType))
+
+    r = obj._meta.db.query (statementString, params, statement = true)!
 
     obj.setSaved()
 
@@ -79,7 +88,7 @@ rowBase =
         "#(obj._meta.id) = @#(obj._meta.id)"
 
     statementString = "update #(obj._meta.table) set #(assignments) where #(whereClause)"
-    obj._meta.db.query (statementString, _.pick(obj, keys))!
+    obj._meta.db.query (statementString, _.pick(obj, keys), statement = true)!
     obj.setNotChanged()
 
   foreignField(obj, field) =
@@ -223,24 +232,42 @@ exports.db(config) =
 
       model
 
-    query(query, params) =
-      self.logQuery(query, params)
-      self.driver.query(query, params)
+    query(query, params, statement: false) =
+      try
+        results = self.driver.query(query, params, statement: statement)!
+        self.logResults(query, params, results, statement)
+        results
+      catch(e)
+        self.logError(query, params, e)
+        @throw e
 
-    logQuery(query, params) =
-      if (self.log)
-        if (self.log :: Function)
-          self.log (query, params)
+    logError(query, params, error) =
+      debugQuery(query, params, error)
+
+    logResults(query, params, results, statement) =
+      if (self.log :: Function)
+        self.log (query, params, results, statement)
+      else
+        if (params)
+          debugQuery(query, params)
         else
-          console.log (query, params)
+          debugQuery(query)
+
+        if (@not statement @and results)
+          debugResults(results)
 
     connect(config) =
-      self.driver =
-        ({
-          mssql = mssqlDriver
-          pg = pgDriver
-          mysql = mysqlDriver
-        }.(config.driver))()
+      driver = {
+        mssql = mssqlDriver
+        pg = pgDriver
+        mysql = mysqlDriver
+        oracle = oracleDriver
+      }.(config.driver)
+
+      if (@not driver)
+        @throw @new Error "no such driver: `#(config.driver)'"
+
+      self.driver = driver()
 
       self.driver.connect(config)!
 

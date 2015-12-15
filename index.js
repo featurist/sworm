@@ -57,12 +57,15 @@
         return prototype(prototype(p.prototype)(obj));
     };
     var self = this;
-    var crypto, _, mssqlDriver, pgDriver, mysqlDriver, rowBase, option;
+    var crypto, _, mssqlDriver, pgDriver, mysqlDriver, oracleDriver, debugQuery, debugResults, rowBase, option;
     crypto = require("crypto");
     _ = require("underscore");
     mssqlDriver = require("./mssqlDriver");
     pgDriver = require("./pgDriver");
     mysqlDriver = require("./mysqlDriver");
+    oracleDriver = require("./oracleDriver");
+    debugQuery = require("debug")("sworm");
+    debugResults = require("debug")("sworm:results");
     rowBase = function() {
         var fieldsForObject, foreignFieldsForObject, insert, update, foreignField, saveManyToOne, saveManyToOnes, saveOneToMany, saveOneToManys, hash;
         fieldsForObject = function(obj) {
@@ -104,7 +107,7 @@
             }();
         };
         insert = function(obj) {
-            var keys, fields, values, outputId, statementString, gen8_asyncResult, r, insertedId;
+            var keys, fields, values, outputId, statementString, params, gen8_asyncResult, r, insertedId;
             return new Promise(function(gen9_onFulfilled) {
                 keys = fieldsForObject(obj);
                 fields = keys.join(", ");
@@ -146,7 +149,13 @@
                     }
                 }();
                 statementString = "insert into " + obj._meta.table + "\n  (" + fields + ")\n  " + outputId.beforeValues() + "\n  values (" + values + ")\n  " + outputId.afterValues();
-                gen9_onFulfilled(Promise.resolve(obj._meta.db.query(statementString, _.pick(obj, keys))).then(function(gen8_asyncResult) {
+                params = _.pick(obj, keys);
+                if (obj._meta.db.driver.outputIdKeys && !obj._meta.compoundKey) {
+                    params = _.extend(params, obj._meta.db.driver.outputIdKeys(obj._meta.idType));
+                }
+                gen9_onFulfilled(Promise.resolve(obj._meta.db.query(statementString, params, {
+                    statement: true
+                })).then(function(gen8_asyncResult) {
                     r = gen8_asyncResult;
                     obj.setSaved();
                     if (!obj._meta.compoundKey) {
@@ -211,7 +220,9 @@
                     }
                 }();
                 statementString = "update " + obj._meta.table + " set " + assignments + " where " + whereClause;
-                gen9_onFulfilled(Promise.resolve(obj._meta.db.query(statementString, _.pick(obj, keys))).then(function(gen14_asyncResult) {
+                gen9_onFulfilled(Promise.resolve(obj._meta.db.query(statementString, _.pick(obj, keys), {
+                    statement: true
+                })).then(function(gen14_asyncResult) {
                     gen14_asyncResult;
                     return obj.setNotChanged();
                 }));
@@ -488,30 +499,59 @@
                 };
                 return model;
             },
-            query: function(query, params) {
+            query: function(query, params, gen55_options) {
                 var self = this;
-                self.logQuery(query, params);
-                return self.driver.query(query, params);
+                var statement;
+                statement = gen55_options !== void 0 && Object.prototype.hasOwnProperty.call(gen55_options, "statement") && gen55_options.statement !== void 0 ? gen55_options.statement : false;
+                var gen56_asyncResult, results;
+                return new Promise(function(gen9_onFulfilled) {
+                    gen9_onFulfilled(new Promise(function(gen9_onFulfilled) {
+                        gen9_onFulfilled(Promise.resolve(self.driver.query(query, params, {
+                            statement: statement
+                        })).then(function(gen57_asyncResult) {
+                            results = gen57_asyncResult;
+                            self.logResults(query, params, results, statement);
+                            return results;
+                        }));
+                    }).then(void 0, function(e) {
+                        self.logError(query, params, e);
+                        throw e;
+                    }));
+                });
             },
-            logQuery: function(query, params) {
+            logError: function(query, params, error) {
                 var self = this;
-                if (self.log) {
-                    if (self.log instanceof Function) {
-                        return self.log(query, params);
+                return debugQuery(query, params, error);
+            },
+            logResults: function(query, params, results, statement) {
+                var self = this;
+                if (self.log instanceof Function) {
+                    return self.log(query, params, results, statement);
+                } else {
+                    if (params) {
+                        debugQuery(query, params);
                     } else {
-                        return console.log(query, params);
+                        debugQuery(query);
+                    }
+                    if (!statement && results) {
+                        return debugResults(results);
                     }
                 }
             },
             connect: function(config) {
                 var self = this;
-                var gen55_asyncResult;
+                var driver, gen58_asyncResult;
                 return new Promise(function(gen9_onFulfilled) {
-                    self.driver = {
+                    driver = {
                         mssql: mssqlDriver,
                         pg: pgDriver,
-                        mysql: mysqlDriver
-                    }[config.driver]();
+                        mysql: mysqlDriver,
+                        oracle: oracleDriver
+                    }[config.driver];
+                    if (!driver) {
+                        throw new Error("no such driver: `" + config.driver + "'");
+                    }
+                    self.driver = driver();
                     gen9_onFulfilled(Promise.resolve(self.driver.connect(config)));
                 });
             },
@@ -522,10 +562,10 @@
         };
         if (config) {
             return function() {
-                var gen56_asyncResult;
+                var gen59_asyncResult;
                 return new Promise(function(gen9_onFulfilled) {
-                    gen9_onFulfilled(Promise.resolve(db.connect(config)).then(function(gen56_asyncResult) {
-                        gen56_asyncResult;
+                    gen9_onFulfilled(Promise.resolve(db.connect(config)).then(function(gen59_asyncResult) {
+                        gen59_asyncResult;
                         return db;
                     }));
                 });
