@@ -388,7 +388,8 @@ In SQL:
 # Queries
 
 ```JavaScript
-var records = db.query(sql, [parameters]);
+db.query(sql, [parameters]).then(function (records) {
+});
 ```
 
 Where:
@@ -397,6 +398,18 @@ Where:
   * `parameters`. If `sql` contains parameters in the form of `@paramName` the corresponding property on the `parameters` object will be substituted into the SQL, doing any escaping necessary.
 
 For select queries, returns an array of objects, containing the fields of each record.
+
+```js
+db.query('select * from people where name = @name', {name: 'Bob'}).then(function (results) {
+  console.log(results);
+
+  /*
+     [
+       {id: 2, name: 'Bob'}
+     ]
+   */
+}); 
+```
 
 ## Stored Procedure Example
 
