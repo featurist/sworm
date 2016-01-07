@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "bluebird": "2.9.12",
+    "debug": "2.2.0",
     "underscore": "1.8.1"
   },
   "devDependencies": {
