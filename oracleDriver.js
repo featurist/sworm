@@ -35,7 +35,6 @@ module.exports = function () {
 
       if (config.options) {
         Object.keys(config.options).forEach(function (key) {
-          console.log('setting ' + key + ': ' + config.options[key]);
           oracledb[key] = config.options[key];
         });
       }
