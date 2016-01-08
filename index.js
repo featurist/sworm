@@ -4,6 +4,7 @@ var mssqlDriver = require("./mssqlDriver");
 var pgDriver = require("./pgDriver");
 var mysqlDriver = require("./mysqlDriver");
 var oracleDriver = require("./oracleDriver");
+var sqliteDriver = require("./sqliteDriver");
 var debugQuery = require("debug")("sworm");
 var debugResults = require("debug")("sworm:results");
 
@@ -333,7 +334,8 @@ exports.db = function(config) {
           mssql: mssqlDriver,
           pg: pgDriver,
           mysql: mysqlDriver,
-          oracle: oracleDriver
+          oracle: oracleDriver,
+          sqlite: sqliteDriver
       }[config.driver];
 
       if (!driver) {
