@@ -1,67 +1,44 @@
-(function() {
-    var Promise = require("bluebird");
-    var gen1_promisify = function(fn) {
-        return new Promise(function(onFulfilled, onRejected) {
-            fn(function(error, result) {
-                if (error) {
-                    onRejected(error);
-                } else {
-                    onFulfilled(result);
-                }
-            });
+var promisify = require('./promisify');
+var optionalRequire = require("./optionalRequire");
+
+module.exports = function() {
+  var sql = optionalRequire("mssql");
+
+  return {
+    query: function(query, params) {
+      var request = new sql.Request(this.connection);
+
+      if (params) {
+        Object.keys(params).forEach(function (key) {
+          request.input(key, params[key]);
         });
-    };
-    var self = this;
-    var optionalRequire;
-    optionalRequire = require("./optionalRequire");
-    module.exports = function() {
-        var self = this;
-        var sql;
-        sql = optionalRequire("mssql");
-        return {
-            query: function(query, params) {
-                var self = this;
-                var request, gen2_items, gen3_i, key, gen4_asyncResult;
-                return new Promise(function(gen5_onFulfilled) {
-                    request = new sql.Request(self.connection);
-                    if (params) {
-                        gen2_items = Object.keys(params);
-                        for (gen3_i = 0; gen3_i < gen2_items.length; ++gen3_i) {
-                            key = gen2_items[gen3_i];
-                            request.input(key, params[key]);
-                        }
-                    }
-                    gen5_onFulfilled(gen1_promisify(function(gen6_callback) {
-                        return request.query(query, gen6_callback);
-                    }));
-                });
-            },
-            connect: function(config) {
-                var self = this;
-                var gen7_asyncResult;
-                return new Promise(function(gen5_onFulfilled) {
-                    self.connection = new sql.Connection(config.config);
-                    gen5_onFulfilled(gen1_promisify(function(gen6_callback) {
-                        return self.connection.connect(gen6_callback);
-                    }));
-                });
-            },
-            close: function() {
-                var self = this;
-                return self.connection.close();
-            },
-            outputIdBeforeValues: function(id) {
-                var self = this;
-                return "output Inserted." + id;
-            },
-            outputIdAfterValues: function(id) {
-                var self = this;
-                return "";
-            },
-            insertedId: function(rows, id) {
-                var self = this;
-                return rows[0][id];
-            }
-        };
-    };
-}).call(this);
+      }
+
+      return promisify(function(cb) {
+        return request.query(query, cb);
+      });
+    },
+
+    connect: function(config) {
+      var self = this;
+      self.connection = new sql.Connection(config.config);
+
+      return promisify(function(cb) {
+        return self.connection.connect(cb);
+      });
+    },
+
+    close: function() {
+      return this.connection.close();
+    },
+    outputIdBeforeValues: function(id) {
+      return "output Inserted." + id;
+    },
+    outputIdAfterValues: function(id) {
+      return "";
+    },
+    insertedId: function(rows, id) {
+      return rows[0][id];
+    }
+  };
+};

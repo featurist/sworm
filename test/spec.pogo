@@ -11,7 +11,7 @@ fs = require 'fs'
 sworm = require '..'
 
 it 'throws exception if no driver is specified or found'
-  expect(sworm.db({driver = 'blah'})).to.eventually.be.rejectedWith('no such driver: `blah''')
+  expect(@{ sworm.db({driver = 'blah'}) }).to.throw('no such driver: `blah''')
 
 describeDatabase(name, config, helpers) =
   describe (name)
