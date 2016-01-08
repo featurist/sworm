@@ -1,7 +1,7 @@
 {
   "name": "sworm",
   "version": "1.0.0",
-  "description": "a lightweight write-only ORM for MSSQL, MySQL, PostgreSQL",
+  "description": "a lightweight write-only ORM for MSSQL, MySQL, PostgreSQL, Oracle, Sqlite 3",
   "main": "index.js",
   "directories": {
     "test": "test"
