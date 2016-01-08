@@ -6,6 +6,7 @@ A very lightweight **write only** Node.js ORM, with support for:
 * PostgreSQL
 * MySQL
 * Oracle DB
+* Sqlite 3
 
 ## NPM
 
@@ -17,6 +18,7 @@ Then install a database driver, one of:
     npm install pg
     npm install mysql
     npm install oracledb
+    npm install sqlite3
 
 See [sworm](https://www.npmjs.org/package/sworm) in NPM.
 
@@ -114,8 +116,72 @@ db.connect({
 
 Connection options:
 
-  * `driver`, one of `'mssql'`, `'mysql'` or `'pg'`.
-  * `config` connection options passed to the database driver of choice. See configuration options for: [SQL Server](https://github.com/patriksimek/node-mssql#configuration-1), [MySQL](https://github.com/felixge/node-mysql#connection-options), [PostgreSQL](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+  * `driver`, one of `'mssql'`, `'mysql'`, `'pg'`, `'oracle'` or `'sqlite'`.
+  * `config` configuration passed to the selected driver:
+
+    * **mysql**
+
+      See: [https://github.com/felixge/node-mysql#connection-options](https://github.com/felixge/node-mysql#connection-options)
+
+      ```js
+      {
+        user: 'username',
+        password: 'password',
+        host: 'localhost',
+        database: 'database name'
+      }
+      ```
+
+    * **mssql**
+
+      See: [https://github.com/patriksimek/node-mssql#configuration-1](https://github.com/patriksimek/node-mssql#configuration-1)
+
+      ```js
+      {
+        user: 'username',
+        password: 'password',
+        server: 'localhost',
+        database: 'databaseName'
+      }
+      ```
+
+    * **pg**
+
+      See also the `url` option below.
+
+      See: [https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback)
+
+      ```js
+      {
+        user: 'username',
+        password: 'password',
+        host: 'localhost',
+        database: 'database name'
+      }
+      ```
+
+    * **oracle**
+
+      See: [https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection)
+
+      ```js
+      {
+        user: 'username',
+        password: 'password',
+        connectString: 'localhost/XE'
+      }
+      ```
+
+    * **sqlite**
+
+      See: [https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback](https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback)
+
+      ```js
+      {
+        filename: 'filename or :memory:'
+      }
+      ```
+
   * `url` a connection URL passed to the postgres driver. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
   * `log`: either `true` to log SQL statements with `console.log()`
 
