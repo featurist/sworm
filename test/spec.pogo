@@ -710,14 +710,6 @@ describeDatabase 'mysql' {
   driverModuleName = 'mysql'
 }
 
-lowercaseObject (obj) =
-  r = {}
-
-  for each @(key) in (Object.keys(obj))
-    r.(key) = obj.(key)
-
-  r
-
 describeDatabase 'oracle' {
   config = {
     user = 'system'
@@ -776,7 +768,7 @@ describeDatabase 'oracle' {
   true = 1
   false = 0
 
-  clean(records) = [r <- records, lowercaseObject(r)]
+  clean(records) = records
 
   driverModuleName = 'oracledb'
 }
@@ -823,7 +815,7 @@ describeDatabase 'sqlite' {
   true = 1
   false = 0
 
-  clean(records) = [r <- records, lowercaseObject(r)]
+  clean(records) = records
 
   driverModuleName = 'sqlite3'
 }

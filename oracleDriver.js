@@ -84,7 +84,11 @@ function formatRows(results) {
   }
 
   var fields = results.metaData.map(function (field) {
-    return field.name.toLowerCase();
+    if (/[a-z]/.test(field.name)) {
+      return field.name;
+    } else {
+      return field.name.toLowerCase();
+    }
   });
 
   if (fields.length > 0) {

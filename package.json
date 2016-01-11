@@ -21,8 +21,7 @@
     "pogo": "0.9.10"
   },
   "scripts": {
-    "test": "mocha",
-    "prepublish": "make"
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
