@@ -32,16 +32,14 @@ var rowBase = function() {
     var fields = keys.join(', ');
     var values = keys.map(function (key) { return '@' + key; }).join(', ');
 
-    var beforeValues, afterValues;
+    var outputId;
     if (typeof obj._meta.id == 'string') {
-      beforeValues = obj._meta.db.driver.outputIdBeforeValues(obj._meta.id);
-      afterValues = obj._meta.db.driver.outputIdAfterValues(obj._meta.id);
+      outputId = obj._meta.db.driver.outputId(obj._meta.id);
     } else {
-      beforeValues = '';
-      afterValues = '';
+      outputId = '';
     }
 
-    var statementString = 'insert into ' + obj._meta.table + ' (' + fields + ') ' + beforeValues + ' values (' + values + ') ' + afterValues;
+    var statementString = 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ') ' + outputId;
 
     var params = _.pick(obj, keys);
 

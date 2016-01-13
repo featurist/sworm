@@ -1,5 +1,6 @@
 var promisify = require('./promisify');
 var optionalRequire = require("./optionalRequire");
+var debug = require('debug')('sworm:pg');
 
 module.exports = function() {
   var pg = optionalRequire("pg");
@@ -35,6 +36,7 @@ module.exports = function() {
       }
 
       return promisify(function(cb) {
+        debug(query, paramList);
         return self.client.query(query, paramList, cb);
       }).then(function(result) {
         return result.rows;
@@ -60,12 +62,11 @@ module.exports = function() {
         return this.done();
       }
     },
-    outputIdBeforeValues: function(id) {
-      return "";
-    },
-    outputIdAfterValues: function(id) {
+
+    outputId: function(id) {
       return "returning " + id;
     },
+
     insertedId: function(rows, id) {
       return rows[0][id];
     }

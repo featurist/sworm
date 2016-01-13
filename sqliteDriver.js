@@ -1,5 +1,6 @@
 var promisify = require('./promisify');
 var optionalRequire = require("./optionalRequire");
+var debug = require('debug')('sworm:sqlite');
 
 module.exports = function() {
   var sqlite = optionalRequire('sqlite3');
@@ -17,6 +18,7 @@ module.exports = function() {
 
       if (statement) {
         return new Promise(function (fulfil, reject) {
+          debug(query, sqliteParams);
           self.connection.run(query, sqliteParams, function (error, result) {
             if (error) {
               reject(error);
@@ -27,6 +29,7 @@ module.exports = function() {
         });
       } else {
         return promisify(function (cb) {
+          debug(query, sqliteParams);
           self.connection.all(query, sqliteParams, cb);
         });
       }
@@ -51,11 +54,7 @@ module.exports = function() {
       });
     },
 
-    outputIdBeforeValues: function(id) {
-      return '';
-    },
-
-    outputIdAfterValues: function(id) {
+    outputId: function(id) {
       return '';
     },
 

@@ -1,5 +1,6 @@
 var promisify = require('./promisify');
 var optionalRequire = require("./optionalRequire");
+var debug = require('debug')('sworm:mysql');
 
 module.exports = function() {
   var mysql = optionalRequire("mysql");
@@ -21,6 +22,7 @@ module.exports = function() {
       }
 
       return promisify(function(cb) {
+        debug(query, paramList);
         return self.connection.query(query, paramList, cb);
       });
     },
@@ -40,11 +42,7 @@ module.exports = function() {
       return this.connection.end();
     },
 
-    outputIdBeforeValues: function(id) {
-      return "";
-    },
-
-    outputIdAfterValues: function(id) {
+    outputId: function(id) {
       return "; select last_insert_id() as id";
     },
 

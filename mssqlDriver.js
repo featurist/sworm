@@ -1,5 +1,6 @@
 var promisify = require('./promisify');
 var optionalRequire = require("./optionalRequire");
+var debug = require('debug')('sworm:mssql');
 
 module.exports = function() {
   var sql = optionalRequire("mssql");
@@ -15,6 +16,7 @@ module.exports = function() {
       }
 
       return promisify(function(cb) {
+        debug(query, params);
         return request.query(query, cb);
       });
     },
@@ -31,12 +33,11 @@ module.exports = function() {
     close: function() {
       return this.connection.close();
     },
-    outputIdBeforeValues: function(id) {
-      return "output Inserted." + id;
+
+    outputId: function(id) {
+      return "; select scope_identity() as " + id;
     },
-    outputIdAfterValues: function(id) {
-      return "";
-    },
+
     insertedId: function(rows, id) {
       return rows[0][id];
     }

@@ -57,11 +57,7 @@ module.exports = function () {
       });
     },
 
-    outputIdBeforeValues: function (id) {
-      return "";
-    },
-
-    outputIdAfterValues: function (id) {
+    outputId: function (id) {
       return " returning " + id + " into :returning_into_id";
     },
 

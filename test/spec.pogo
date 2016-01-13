@@ -91,6 +91,20 @@ describeDatabase(name, config, helpers) =
           }
         ]
 
+      describe 'concurrency'
+        it 'can insert multiple rows, maintaining correct IDs'
+          people = [
+            n <- [1..100]
+            p = person { name = "Person #(n)" }
+            @{ p.save()!, p }()!
+          ]
+
+          [
+            originalPerson <- people
+            loadedPerson = db.query('select name from people where id = @id', { id = originalPerson.id })!
+            expect(originalPerson.name).to.equal(loadedPerson.0.name)
+          ]
+
       describe 'strings'
         it 'can insert with escapes'
           p = person {
@@ -607,6 +621,18 @@ describeDatabase 'mssql' {
                                                  [id] [int] NOT NULL,
                                                  [name] [nvarchar](50) NOT NULL
                                                 )"
+
+    createTable! 'other_people' "CREATE TABLE [dbo].[other_people](
+                                                 [id] [int] IDENTITY(1,1) NOT NULL,
+                                                 [name] [nvarchar](50) NOT NULL
+                                                )"
+
+    db.query! "CREATE TRIGGER people_trigger
+                 ON people
+               FOR INSERT AS 
+               BEGIN
+                 INSERT other_people VALUES ('person')
+               END;"
 
   true = true
   false = false
