@@ -204,6 +204,24 @@ Close the connection after use:
 db.close()
 ```
 
+### Debug
+
+This module uses [debug](https://www.npmjs.com/package/debug), so you can easily see what's happening under the hood by setting a `DEBUG` environment variable.
+
+```js
+DEBUG=sworm node myapp.js
+```
+
+There are various schemes you can use:
+
+* `sworm` all queries
+* `sworm:results` all results
+* `sworm:mssql` exact query passed to mssql
+* `sworm:mysql` exact query passed to mysql
+* `sworm:pg` exact query passed to postgres
+* `sworm:oracle` exact query passed to oracle
+* `sworm:sqlite` exact query passed to sqlite3
+
 ## Models
 
 ```JavaScript
