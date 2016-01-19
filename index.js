@@ -343,8 +343,13 @@ exports.db = function(config) {
       this.driver = driver();
       return this.driver.connect(config);
     },
+
     close: function() {
-      return this.driver.close();
+      if (this.driver) {
+        return this.driver.close();
+      } else {
+        return Promise.resolve();
+      }
     }
   };
 

@@ -10,8 +10,13 @@ fs = require 'fs'
 
 sworm = require '..'
 
-it 'throws exception if no driver is specified or found'
-  expect(@{ sworm.db({driver = 'blah'}) }).to.throw('no such driver: `blah''')
+describe 'sworm'
+  it 'throws exception if no driver is specified or found'
+    expect(@{ sworm.db({driver = 'blah'}) }).to.throw('no such driver: `blah''')
+
+  it 'can close connection without opening'
+    db = sworm.db()
+    db.close()!
 
 describeDatabase(name, config, helpers) =
   describe (name)
