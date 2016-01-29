@@ -12,7 +12,7 @@ sworm = require '..'
 
 describe 'sworm'
   it 'throws exception if no driver is specified or found'
-    expect(@{ sworm.db({driver = 'blah'}) }).to.throw('no such driver: `blah''')
+    expect(@{ sworm.db({driver = 'blah'}).connect() }).to.throw('no such driver: `blah''')
 
   it 'can close connection without opening'
     db = sworm.db()
@@ -30,7 +30,7 @@ describeDatabase(name, config, helpers) =
 
       it 'throws an exception if the driver module is not present'
         try
-          sworm.db(config)!
+          sworm.db(config).connect()!
           throw (new (Error 'expected module not found error'))
         catch(e)
           expect(e.message).to.contain "npm install #(helpers.driverModuleName)"
@@ -44,7 +44,7 @@ describeDatabase(name, config, helpers) =
       statements = nil
 
       before
-        schema = sworm.db(config)!
+        schema = sworm.db(config)
 
         helpers.createTables(schema, tables)!
 
@@ -53,7 +53,7 @@ describeDatabase(name, config, helpers) =
           db.query "delete from #(table)"!
 
       beforeEach
-        db := sworm.db(config)!
+        db := sworm.db(config)
         statements := []
 
         db.log(sql, params, results) =
@@ -745,7 +745,7 @@ describeDatabase 'oracle' {
   config = {
     user = 'system'
     password = 'oracle'
-    connectString = "docker/XE"
+    connectString = "192.168.99.100/XE"
   }
   driver = 'oracle'
 } {

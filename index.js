@@ -107,9 +107,9 @@ var rowBase = function() {
     if (!(value instanceof Array)) {
       return value.save().then(function () {
         var foreignId =
-          obj._meta.foreignKeyFor
-            ? obj._meta.foreignKeyFor(field)
-            : field + '_id';
+          obj._meta.foreignKeyFor ?
+            obj._meta.foreignKeyFor(field) :
+              field + '_id';
 
         if (!value._meta.compoundKey) {
           obj[foreignId] = value.identity();
@@ -159,16 +159,11 @@ var rowBase = function() {
       var force = options && options.hasOwnProperty('force')? options.force: false;
 
       if (!self._saving) {
-        function setNotSaving() {
-          self.setSaving(false);
-        }
         self.setSaving(true);
 
         return saveManyToOnes(this).then(function () {
           if (self.changed() || force) {
-            var writePromise = self.saved()
-              ? update(self)
-              : insert(self);
+            var writePromise = self.saved() ? update(self) : insert(self);
 
             return writePromise.then(function () {
               return saveOneToManys(self);
@@ -219,7 +214,8 @@ var rowBase = function() {
 
     setNotChanged: function() {
       if (this._hash) {
-        return this._hash = hash(this);
+        this._hash = hash(this);
+        return this._hash;
       } else {
         return Object.defineProperty(this, "_hash", {
           value: hash(this),
@@ -250,7 +246,6 @@ function option(obj, property, value) {
 }
 
 exports.db = function(config) {
-  var self = this;
   var db = {
     log: config && config.log,
     config: config,
@@ -299,12 +294,15 @@ exports.db = function(config) {
 
     query: function(query, params, options) {
       var self = this;
-      return this.driver.query(query, params, options).then(function (results) {
-        self.logResults(query, params, results, options && options.statement);
-        return results;
-      }, function (e) {
-        self.logError(query, params, e);
-        throw e;
+
+      return this.connect().then(function () {
+        return self.driver.query(query, params, options).then(function (results) {
+          self.logResults(query, params, results, options && options.statement);
+          return results;
+        }, function (e) {
+          self.logError(query, params, e);
+          throw e;
+        });
       });
     },
 
@@ -328,20 +326,27 @@ exports.db = function(config) {
     },
 
     connect: function (config) {
+      if (this.connection) {
+        return this.connection;
+      }
+
+      var _config = config || this.config;
+
       var driver = {
           mssql: mssqlDriver,
           pg: pgDriver,
           mysql: mysqlDriver,
           oracle: oracleDriver,
           sqlite: sqliteDriver
-      }[config.driver];
+      }[_config.driver];
 
       if (!driver) {
-          throw new Error("no such driver: `" + config.driver + "'");
+          throw new Error("no such driver: `" + _config.driver + "'");
       }
 
       this.driver = driver();
-      return this.driver.connect(config);
+      this.connection = this.driver.connect(_config);
+      return this.connection;
     },
 
     close: function() {
@@ -353,11 +358,5 @@ exports.db = function(config) {
     }
   };
 
-  if (config) {
-    return db.connect(config).then(function () {
-      return db;
-    });
-  } else {
-      return db;
-  }
+  return db;
 };
