@@ -1,4 +1,4 @@
-# SWORM
+# SWORM [![npm version](https://badge.fury.io/js/sworm.svg)](https://www.npmjs.com/package/sworm) [![npm](https://img.shields.io/npm/dm/localeval.svg?style=flat-square)](https://www.npmjs.com/package/sworm) [![Build Status](https://travis-ci.org/featurist/sworm.svg?branch=master)](https://travis-ci.org/featurist/sworm)
 
 A very lightweight **write only** Node.js ORM, with support for:
 
@@ -39,7 +39,7 @@ Just write SQL, you know how.
 
 ## Example
 
-```JavaScript
+```js
 var person = db.model({table: 'people'});
 var address = db.model({table: 'addresses'});
 
@@ -71,7 +71,7 @@ Produces:
 
 Connect:
 
-```JavaScript
+```js
 var sworm = require('sworm');
 
 var db = sworm.db({
@@ -94,7 +94,7 @@ bob.save();
 
 Or define models then connect:
 
-```JavaScript
+```js
 var sworm = require('sworm');
 
 var db = sworm.db();
@@ -189,7 +189,7 @@ Connection options:
 
     Can also be a function for custom logging:
 
-    ```JavaScript
+    ```js
     function (sql, params) {
       // sql == 'select * from people where name = @name'
       // params == {name: 'bob'}
@@ -202,7 +202,7 @@ Connection options:
 
 Close the connection after use:
 
-```JavaScript
+```js
 db.close()
 ```
 
@@ -226,7 +226,7 @@ There are various schemes you can use:
 
 ## Models
 
-```JavaScript
+```js
 var createEntity = db.model(options);
 ```
 
@@ -236,7 +236,7 @@ var createEntity = db.model(options);
   * `id` (`'id'`) the name of the identity column. This can be an array of id columns for compound keys.
   * `foreignKeyFor` a function that returns a foreign key field name for a member (see [Relationships](#relationships)), defaults to:
 
-    ```JavaScript
+    ```js
     function foreignKeyFor(fieldName) {
       return fieldName + '_id';
     }
@@ -248,7 +248,7 @@ var createEntity = db.model(options);
 
 Any other properties or functions on the `options` object are accessible by entities.
 
-```JavaScript
+```js
 var address = db.model({
   table: 'addresses',
 
@@ -267,7 +267,7 @@ fremantle.addPerson(person({name: 'bob'}));
 
 The entity constructor takes an object with fields to be saved to the database.
 
-```JavaScript
+```js
 var person = db.model({...});
 
 var bob = person({
@@ -281,7 +281,7 @@ Where options can have:
 
 ### Save
 
-```JavaScript
+```js
 var promise = entity.save([options]);
 ```
 
@@ -293,7 +293,7 @@ Objects know when they've been modified since their last insert or update, so th
 
 ### Identity
 
-```JavaScript
+```js
 entity.identity()
 ```
 
@@ -301,7 +301,7 @@ Returns the ID of the entity, based on the identity column specified in the mode
 
 ### Changed
 
-```JavaScript
+```js
 entity.changed()
 ```
 
@@ -317,7 +317,7 @@ When entity A contains a field that is entity B, then B will be saved first and 
 
 The foreign key of the member will be saved on the field name `member_id`. So `address` will have a foreign key of `address_id`. See the `foreignKeyFor` option in [Models](#models).
 
-```JavaScript
+```js
 var person = db.model({table: 'people'});
 var address = db.model({table: 'addresses'});
 
@@ -353,7 +353,7 @@ When entity A contains a field that is an array that contains entities B and C. 
 
 This allows entities B and C to refer to entity A, as they would in their tables.
 
-```JavaScript
+```js
 var person = db.model({ table: 'people' });
 var address = db.model({ table: 'addresses' });
 
@@ -375,7 +375,7 @@ essert.save().then(function () {
 
 Alternatively, we can return the people in the address using a function. When the address is saved, the `people` function will be called with the owner address as `this`, then we can set the foreign key for the people.
 
-```JavaScript
+```js
 var person = db.model({ table: 'people' });
 var address = db.model({ table: 'addresses' });
 
@@ -415,7 +415,7 @@ In SQL:
 
 Many-to-many is just a combination of one-to-many and many-to-one:
 
-```JavaScript
+```js
 var person = db.model({ table: 'people' });
 var personAddress = db.model({ table: 'people_addresses', id: ['address_id', 'person_id'] });
 var address = db.model({ table: 'addresses' });
@@ -473,7 +473,7 @@ In SQL:
 
 # Queries
 
-```JavaScript
+```js
 db.query(sql, [parameters]).then(function (records) {
 });
 ```
@@ -499,14 +499,23 @@ db.query('select * from people where name = @name', {name: 'Bob'}).then(function
 
 ## Stored Procedure Example
 
-```JavaScript
+```js
 db.query('myProcName @param1, @param2', {param1: 'a', param2: 'b'});
 ```
 
 ## Model Queries
 
-```JavaScript
-var entities = model.query(sql, [parameters]);
+```js
+model.query(sql, [parameters]).then(function (entities) {
+});
 ```
 
 Same as `db.query()` but records returned are turned into entities of the model that can subsequently be modified and saved.
+
+```js
+person.query('select * from people where id = @id', {id: 1}, function (people) {
+  var bob = people[0];
+  bob.name = 'Jack';
+  return bob.save();
+});
+```
