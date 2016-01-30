@@ -1,5 +1,3 @@
-var Promise = require('bluebird');
-
 module.exports = function(fn) {
   return new Promise(function(fulfill, reject) {
     try {

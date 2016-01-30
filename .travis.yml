@@ -1,0 +1,11 @@
+language: node_js
+node_js:
+  - stable
+env:
+  - TRAVIS=true
+services:
+  - postgresql
+  - mysql
+before_script:
+  - mysql -e 'create database sworm;'
+  - psql -c 'create database sworm;' -U postgres

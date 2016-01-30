@@ -74,20 +74,22 @@ Connect:
 ```JavaScript
 var sworm = require('sworm');
 
-sworm.db({
-  driver: 'mssql',
+var db = sworm.db({
+  driver: 'pg',
   config: {
     user: 'user',
     password: 'password',
-    server: 'localhost',
+    host: 'localhost',
     database: 'databasename'
   }
-}).then(function (db) {
-
-  var person = db.model({table: 'people'});
-  ...
-
 });
+
+var person = db.model({table: 'people'});
+
+var bob = person({name: 'Bob'});
+
+// sworm connects at the first database interaction
+bob.save();
 ```
 
 Or define models then connect:

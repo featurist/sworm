@@ -1,1 +1,1 @@
---compilers pogo:pogo --reporter spec
+--reporter spec
