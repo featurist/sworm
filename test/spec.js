@@ -247,7 +247,7 @@ function describeDatabase(name, config) {
           });
         });
 
-        return it("doesn't update after entity taken from model query", function() {
+        it("doesn't update after entity taken from model query", function() {
           return bob.save().then(function() {
             expect(statements).to.eql([ "insert" ]);
 
@@ -287,7 +287,7 @@ function describeDatabase(name, config) {
       });
 
       describe("custom id columns", function() {
-        return it("can insert with weird_id", function() {
+        it("can insert with weird_id", function() {
           var personWeirdId = db.model({
             table: "people_weird_id",
             id: "weird_id"
@@ -310,7 +310,7 @@ function describeDatabase(name, config) {
       });
 
       describe("explicitly setting id", function() {
-        return it("can insert with id", function() {
+        it("can insert with id", function() {
           var personExplicitId = db.model({
             table: "people_explicit_id"
           });
@@ -472,7 +472,7 @@ function describeDatabase(name, config) {
 
       describe("queries", function() {
         describe("parameterised queries", function() {
-          return it("can pass parameters to a query", function() {
+          it("can pass parameters to a query", function() {
             return person({
               name: "bob"
             }).save().then(function() {
@@ -512,7 +512,7 @@ function describeDatabase(name, config) {
             });
           });
 
-          return it("entites are returned from query and can be modified and saved", function() {
+          it("entites are returned from query and can be modified and saved", function() {
             var bob = person({
               name: "bob"
             });
@@ -689,7 +689,7 @@ function describeDatabase(name, config) {
           });
         });
 
-        return it("can have a many to many relationship", function() {
+        it("can have a many to many relationship", function() {
           function livesIn(person, address) {
             var pa = personAddress({
               person: person,
@@ -771,8 +771,8 @@ function describeDatabase(name, config) {
       });
     });
 
-    return describe("connection", function() {
-      return it("can define models before connecting to database", function() {
+    describe("connection", function() {
+      it("can define models before connecting to database", function() {
         var schema = sworm.db();
 
         var personModel = schema.model({
@@ -791,6 +791,21 @@ function describeDatabase(name, config) {
               })).to.eql(['bob']);
             });
           });
+        });
+      });
+
+      it('can setup the session after connection', function () {
+        this.timeout(5000);
+        var statements = [];
+        var db = sworm.db(_.extend(config, {setupSession: function (db) {
+          return db.query('select * from people_addresses');
+        }}));
+        db.log = function (query) {
+          statements.push(query);
+        };
+
+        return db.query('select * from people').then(function () {
+          expect(statements).to.eql(['select * from people_addresses', 'select * from people']);
         });
       });
     });

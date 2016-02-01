@@ -295,7 +295,7 @@ exports.db = function(config) {
     query: function(query, params, options) {
       var self = this;
 
-      return this.connect().then(function () {
+      function runQuery() {
         return self.driver.query(query, params, options).then(function (results) {
           self.logResults(query, params, results, options && options.statement);
           return results;
@@ -303,7 +303,13 @@ exports.db = function(config) {
           self.logError(query, params, e);
           throw e;
         });
-      });
+      }
+
+      if (this.runningBeginSession) {
+        return runQuery();
+      } else {
+        return this.connect().then(runQuery);
+      }
     },
 
     logError: function(query, params, error) {
@@ -326,6 +332,8 @@ exports.db = function(config) {
     },
 
     connect: function (config) {
+      var self = this;
+
       if (this.connection) {
         return this.connection;
       }
@@ -345,7 +353,17 @@ exports.db = function(config) {
       }
 
       this.driver = driver();
-      this.connection = this.driver.connect(_config);
+      this.connection = this.driver.connect(_config).then(function () {
+        if (_config.setupSession) {
+          self.runningBeginSession = true;
+
+          function finishRunningBeginSession() {
+            self.runningBeginSession = false;
+          }
+
+          return _config.setupSession(self).then(finishRunningBeginSession, finishRunningBeginSession);
+        }
+      });
       return this.connection;
     },
 

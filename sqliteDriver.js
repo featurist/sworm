@@ -6,7 +6,7 @@ module.exports = function() {
   var sqlite = optionalRequire('sqlite3');
 
   return {
-    query: function(query, params, statement) {
+    query: function(query, params, options) {
       var self = this;
       var sqliteParams = {};
 
@@ -16,7 +16,7 @@ module.exports = function() {
         });
       }
 
-      if (statement) {
+      if (options && options.statement) {
         return new Promise(function (fulfil, reject) {
           debug(query, sqliteParams);
           self.connection.run(query, sqliteParams, function (error, result) {

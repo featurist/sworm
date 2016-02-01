@@ -185,6 +185,14 @@ Connection options:
       ```
 
   * `url` a connection URL passed to the postgres driver. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+  * `setupSession` a function that is passed the `db` to setup the session before any queries are run.
+
+    ```js
+    setupSession: function (db) {
+      return db.query("alter session set time_zone = 'UTC'");
+    }
+    ```
+
   * `log`: either `true` to log SQL statements with `console.log()`
 
     Can also be a function for custom logging:
