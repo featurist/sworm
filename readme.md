@@ -533,3 +533,15 @@ person.query('select * from people where id = @id', {id: 1}, function (people) {
   return bob.save();
 });
 ```
+
+## Options
+
+You can pass options to the database driver when executing a query
+
+```js
+db.query(sql, parameters, [options])
+```
+
+* SQLite3
+  `exec` runs the `exec()` method on the connection, see [exec](https://github.com/mapbox/node-sqlite3/wiki/API#databaseexecsql-callback). Note that this method ignores any query `parameters` passed in.
+

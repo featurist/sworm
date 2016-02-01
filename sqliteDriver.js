@@ -27,6 +27,11 @@ module.exports = function() {
             }
           });
         });
+      } else if (options && options.exec) {
+        return promisify(function (cb) {
+          debug(query, sqliteParams);
+          self.connection.exec(query, cb);
+        });
       } else {
         return promisify(function (cb) {
           debug(query, sqliteParams);
