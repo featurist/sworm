@@ -164,13 +164,19 @@ Connection options:
 
     * **oracle**
 
-      See: [https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection)
+      See: [getConnection()](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection)
+      For `options` see [Oracledb Properties](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#oracledbproperties)
 
       ```js
       {
         user: 'username',
         password: 'password',
-        connectString: 'localhost/XE'
+        connectString: 'localhost/XE',
+
+        options: {
+          // options to set on `oracledb`
+          maxRows: 1000
+        }
       }
       ```
 
