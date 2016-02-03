@@ -1,4 +1,4 @@
-# SWORM [![npm version](https://badge.fury.io/js/sworm.svg)](https://www.npmjs.com/package/sworm) [![npm](https://img.shields.io/npm/dm/localeval.svg?style=flat-square)](https://www.npmjs.com/package/sworm) [![Build Status](https://travis-ci.org/featurist/sworm.svg?branch=master)](https://travis-ci.org/featurist/sworm)
+# SWORM [![npm version](https://img.shields.io/npm/v/sworm.svg)](https://www.npmjs.com/package/sworm) [![npm](https://img.shields.io/npm/dm/sworm.svg)](https://www.npmjs.com/package/sworm) [![Build Status](https://travis-ci.org/featurist/sworm.svg?branch=master)](https://travis-ci.org/featurist/sworm)
 
 A very lightweight **write only** Node.js ORM, with support for:
 
