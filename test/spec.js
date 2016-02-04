@@ -565,6 +565,30 @@ function describeDatabase(name, config) {
           });
         });
 
+        it("can save a many to one relationship with function", function() {
+          var bobsAddress;
+          var bob = person({
+              name: "bob",
+              address: function () {
+                return bobsAddress = address({
+                  address: "15, Rue d'Essert"
+                })
+              }
+          });
+
+          return bob.save().then(function() {
+            expect(statements).to.eql([ "insert", "insert" ]);
+            expect(bob.address).to.equal(bobsAddress);
+
+            return db.query("select * from addresses").then(function(addresses) {
+              expect(helpers.clean(addresses)).to.eql([{
+                id: bob.address_id,
+                address: "15, Rue d'Essert"
+              }]);
+            });
+          });
+        });
+
         describe("custom foreign keys", function() {
           it("can save a many to one relationship with a custom foreign key", function() {
             var personWeirdId = db.model({
@@ -661,6 +685,7 @@ function describeDatabase(name, config) {
 
           return rueDEssert.save().then(function() {
             expect(statements).to.eql([ "insert", "insert", "insert" ]);
+            expect(rueDEssert.people).to.eql([bob, jane]);
 
             return db.query("select * from addresses").then(function(addresses) {
               expect(helpers.clean(addresses)).to.eql([ {
@@ -668,6 +693,48 @@ function describeDatabase(name, config) {
                   address: "15, Rue d'Essert"
               } ]);
 
+              return db.query("select * from people order by name").then(function(people) {
+                expect(people.map(function (p) {
+                  return {
+                    name: p.name,
+                    address_id: p.address_id
+                  };
+                })).to.eql([
+                  {
+                    name: "bob",
+                    address_id: rueDEssert.id
+                  },
+                  {
+                    name: "jane",
+                    address_id: rueDEssert.id
+                  }
+                ]);
+              });
+            });
+          });
+        });
+
+        it("one to many relationships with functions aren't saved twice", function() {
+          var bob;
+          var jane;
+          var rueDEssert = address({
+            address: "15, Rue d'Essert",
+            people: function() {
+              return [
+                bob = person({
+                  name: "bob",
+                  address: this
+                }),
+                jane = person({
+                  name: "jane",
+                  address: this
+                })
+              ];
+            }
+          });
+
+          return rueDEssert.save().then(function() {
+            return rueDEssert.save().then(function() {
               return db.query("select * from people order by name").then(function(people) {
                 expect(people.map(function (p) {
                   return {

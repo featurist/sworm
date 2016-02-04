@@ -95,7 +95,9 @@ var rowBase = function() {
   function foreignField(obj, field) {
     var v = obj[field];
     if (typeof v == 'function') {
-      return obj[field]();
+      var value = obj[field]();
+      obj[field] = value;
+      return value;
     } else {
       return v;
     }

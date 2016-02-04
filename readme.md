@@ -387,7 +387,7 @@ essert.save().then(function () {
 });
 ```
 
-Alternatively, we can return the people in the address using a function. When the address is saved, the `people` function will be called with the owner address as `this`, then we can set the foreign key for the people.
+Alternatively, we can return the people in the address using a function. When the address is saved, the `people` function will be called with the owner address as `this`, then we can set the foreign key for the people. Following the `save()` the results of the function will be saved as an array on the object.
 
 ```js
 var person = db.model({ table: 'people' });
@@ -405,6 +405,7 @@ var essert = address({
 
 essert.save().then(function () {
   // all objects saved.
+  // essert.people == [{name: 'bob', ...}, {name: 'jane', ...}]
 });
 ```
 
