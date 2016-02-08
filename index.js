@@ -157,6 +157,8 @@ var rowBase = function() {
 
   return {
     save: function(options) {
+      this._meta.db.ensureConnected();
+
       var self = this;
       var force = options && options.hasOwnProperty('force')? options.force: false;
 
@@ -333,6 +335,12 @@ exports.db = function(config) {
         }
     },
 
+    ensureConnected: function() {
+      if (!this.config) {
+        throw new Error('sworm has not been configured to a database, use db.connect(config) or sworm.db(config)');
+      }
+    },
+
     connect: function (config) {
       var self = this;
 
@@ -340,7 +348,9 @@ exports.db = function(config) {
         return this.connection;
       }
 
-      var _config = config || this.config;
+      var _config = this.config = config || this.config;
+
+      this.ensureConnected();
 
       var driver = {
           mssql: mssqlDriver,
