@@ -630,6 +630,32 @@ function describeDatabase(name, config) {
           });
         });
 
+        it("can save a many to one relationship with function that returns undefined", function() {
+          var bobsAddress;
+          var bob = person({
+              name: "bob",
+              address: function () {
+              }
+          });
+
+          return bob.save().then(function() {
+            expect(statements).to.eql([ "insert" ]);
+            expect(bob.address).to.equal(bobsAddress);
+
+            return db.query("select * from addresses").then(function(addresses) {
+              expect(helpers.clean(addresses)).to.eql([]);
+            });
+          }).then(function () {
+            return db.query("select * from people").then(function(people) {
+              expect(helpers.clean(people)).to.eql([{
+                id: bob.id,
+                name: 'bob',
+                address_id: null
+              }]);
+            });
+          });
+        });
+
         describe("custom foreign keys", function() {
           it("can save a many to one relationship with a custom foreign key", function() {
             var personWeirdId = db.model({

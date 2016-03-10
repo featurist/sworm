@@ -118,7 +118,7 @@ var rowBase = function() {
   function saveManyToOne(obj, field) {
     var value = foreignField(obj, field);
 
-    if (!(value instanceof Array)) {
+    if (value && !(value instanceof Array)) {
       return value.save().then(function () {
         var foreignId =
           obj._meta.foreignKeyFor ?
