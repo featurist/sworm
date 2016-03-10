@@ -33,7 +33,7 @@ module.exports = {
         return createTable("people_weird_id",
           `CREATE TABLE [dbo].[people_weird_id](
              [weird_id] [int] IDENTITY(1,1) NOT NULL,
-             [name] [nvarchar](50) NOT NULL,
+             [name] [nvarchar](50) NULL,
              [address_weird_id] [int] NULL
            )`
         );
@@ -105,7 +105,7 @@ module.exports = {
         return createTable("people_weird_id",
           `create table if not exists people_weird_id(
              weird_id serial NOT NULL,
-             name varchar(50) NOT NULL,
+             name varchar(50) NULL,
              address_weird_id int NULL
            )`
         );
@@ -161,7 +161,7 @@ module.exports = {
         return createTable("people_weird_id",
           `create table if not exists people_weird_id(
              weird_id serial NOT NULL,
-             name varchar(50) NOT NULL,
+             name varchar(50) NULL,
              address_weird_id int NULL
            )`
         );
@@ -253,7 +253,7 @@ module.exports = {
         return createTable("people_weird_id", "weird_id",
           `create table people_weird_id(
              weird_id number primary key,
-             name varchar2(50) NOT NULL,
+             name varchar2(50) NULL,
              address_weird_id int NULL
           )`
         );
@@ -308,7 +308,7 @@ module.exports = {
         return createTable("people_weird_id",
           `create table if not exists people_weird_id(
              weird_id integer primary key,
-             name varchar(50) NOT NULL,
+             name varchar(50) NULL,
              address_weird_id integer NULL
            )`
         );

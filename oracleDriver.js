@@ -61,25 +61,29 @@ module.exports = function () {
       return " returning " + id + " into :returning_into_id";
     },
 
+    insertEmpty: function(table, id) {
+      return 'insert into ' + table + ' (' + id + ') values (default)';
+    },
+
     outputIdKeys: function (idType) {
       return {
         returning_into_id: { type: idType || oracledb.NUMBER, dir: oracledb.BIND_OUT }
       };
     },
 
-    insertedId: function (rows, id) {
+    insertedId: function (rows) {
       return rows.outBinds.returning_into_id[0];
     }
   };
 };
 
-function formatRows(results) {
-  var rows = results.rows;
+function formatRows(resultSet) {
+  var rows = resultSet.rows;
   if (!rows) {
     return rows;
   }
 
-  var fields = results.metaData.map(function (field) {
+  var fields = resultSet.metaData.map(function (field) {
     if (/[a-z]/.test(field.name)) {
       return field.name;
     } else {
@@ -88,7 +92,6 @@ function formatRows(results) {
   });
 
   if (fields.length > 0) {
-    var results;
     var length = rows.length;
     var results = new Array(length);
 

@@ -27,8 +27,7 @@ var rowBase = function() {
     });
   }
 
-  function insert(obj) {
-    var keys = fieldsForObject(obj);
+  function insertStatement(obj, keys) {
     var fields = keys.join(', ');
     var values = keys.map(function (key) { return '@' + key; }).join(', ');
 
@@ -39,7 +38,20 @@ var rowBase = function() {
       outputId = '';
     }
 
-    var statementString = 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ') ' + outputId;
+    if (!fields.length) {
+      if (obj._meta.db.driver.insertEmpty) {
+        return obj._meta.db.driver.insertEmpty(obj._meta.table, obj._meta.id) + ' ' + outputId;
+      } else {
+        return 'insert into ' + obj._meta.table + ' default values ' + outputId;
+      }
+    } else {
+      return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ') ' + outputId;
+    }
+  }
+
+  function insert(obj) {
+    var keys = fieldsForObject(obj);
+    var statementString = insertStatement(obj, keys);
 
     var params = _.pick(obj, keys);
 

@@ -42,11 +42,15 @@ module.exports = function() {
       return this.connection.end();
     },
 
-    outputId: function(id) {
+    outputId: function() {
       return "; select last_insert_id() as id";
     },
 
-    insertedId: function(rows, id) {
+    insertEmpty: function(table) {
+      return 'insert into ' + table + ' () values ()';
+    },
+
+    insertedId: function(rows) {
       return rows[1][0].id;
     }
   };

@@ -56,7 +56,7 @@ if (process.env.TRAVIS) {
 
   describeDatabase("sqlite", {
     driver: "sqlite",
-    config: { filename: __dirname + "/test.sql" }
+    config: { filename: __dirname + "/test.db" }
   });
 } else {
   describeDatabase("mssql", {
@@ -81,7 +81,7 @@ if (process.env.TRAVIS) {
 
   describeDatabase("sqlite", {
     driver: "sqlite",
-    config: { filename: __dirname + "/test.sql" }
+    config: { filename: __dirname + "/test.db" }
   });
 }
 
@@ -176,6 +176,25 @@ function describeDatabase(name, config) {
               id: p.id,
               name: "bob",
               address_id: null
+            }]);
+          });
+        });
+      });
+
+      it("can insert emtpy rows", function() {
+        var personWeirdId = db.model({
+          table: "people_weird_id",
+          id: "weird_id"
+        });
+        var p = personWeirdId({});
+        return p.save().then(function() {
+          expect(p.weird_id).to.exist;
+
+          return db.query("select * from people_weird_id").then(function(people) {
+            return expect(helpers.clean(people)).to.eql([{
+              weird_id: p.weird_id,
+              name: null,
+              address_weird_id: null
             }]);
           });
         });

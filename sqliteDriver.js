@@ -59,11 +59,11 @@ module.exports = function() {
       });
     },
 
-    outputId: function(id) {
+    outputId: function() {
       return '';
     },
 
-    insertedId: function(result, id) {
+    insertedId: function(result) {
       return result.lastId;
     }
   };
