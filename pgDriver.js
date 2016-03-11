@@ -43,6 +43,14 @@ module.exports = function() {
       });
     },
 
+    insert: function(query, params, options) {
+      var id = options.id;
+
+      return this.query(query + ' returning ' + id, params).then(function (rows) {
+        return rows[0][id];
+      });
+    },
+
     connect: function(config) {
       var self = this;
       return new Promise(function(result, error) {
@@ -57,18 +65,11 @@ module.exports = function() {
         });
       });
     },
+
     close: function() {
       if (this.done) {
         return this.done();
       }
-    },
-
-    outputId: function(id) {
-      return "returning " + id;
-    },
-
-    insertedId: function(rows, id) {
-      return rows[0][id];
     }
   };
 };

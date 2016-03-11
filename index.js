@@ -31,21 +31,14 @@ var rowBase = function() {
     var fields = keys.join(', ');
     var values = keys.map(function (key) { return '@' + key; }).join(', ');
 
-    var outputId;
-    if (typeof obj._meta.id == 'string') {
-      outputId = obj._meta.db.driver.outputId(obj._meta.id);
-    } else {
-      outputId = '';
-    }
-
     if (!fields.length) {
       if (obj._meta.db.driver.insertEmpty) {
-        return obj._meta.db.driver.insertEmpty(obj._meta.table, obj._meta.id) + ' ' + outputId;
+        return obj._meta.db.driver.insertEmpty(obj._meta.table, obj._meta.id);
       } else {
-        return 'insert into ' + obj._meta.table + ' default values ' + outputId;
+        return 'insert into ' + obj._meta.table + ' default values';
       }
     } else {
-      return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ') ' + outputId;
+      return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ')';
     }
   }
 
@@ -60,13 +53,14 @@ var rowBase = function() {
     }
 
     return obj._meta.db.query(statementString, params, {
-      statement: true
-    }).then(function (r) {
+      insert: !obj._meta.compoundKey,
+      statement: obj._meta.compoundKey,
+      id: obj._meta.id
+    }).then(function (insertedId) {
       obj.setSaved();
 
       if (!obj._meta.compoundKey) {
-          var insertedId = obj._meta.db.driver.insertedId(r, obj._meta.id);
-          obj[obj._meta.id] = insertedId;
+        obj[obj._meta.id] = insertedId;
       }
 
       return obj.setNotChanged();
@@ -304,7 +298,7 @@ exports.db = function(config) {
           });
         });
       };
-      
+
       return model;
     },
 
@@ -312,8 +306,12 @@ exports.db = function(config) {
       var self = this;
 
       function runQuery() {
-        return self.driver.query(query, params, options).then(function (results) {
-          self.logResults(query, params, results, options && options.statement);
+        var command = options && options.insert
+          ? self.driver.insert(query, params, options)
+          : self.driver.query(query, params, options)
+
+        return command.then(function (results) {
+          self.logResults(query, params, results, options);
           return results;
         }, function (e) {
           self.logError(query, params, e);
@@ -332,16 +330,19 @@ exports.db = function(config) {
       debugQuery(query, params, error);
     },
 
-    logResults: function(query, params, results, statement) {
+    logResults: function(query, params, results, options) {
         if (typeof this.log == 'function') {
-          return this.log(query, params, results, statement);
+          return this.log(query, params, results, options);
         } else {
           if (params) {
             debugQuery(query, params);
           } else {
             debugQuery(query);
           }
-          if (!statement && results) {
+
+          if (options && options.insert) {
+            return debugResults('id = ' + results);
+          } else if (!(options && options.statement) && results) {
             return debugResults(results);
           }
         }
@@ -378,13 +379,12 @@ exports.db = function(config) {
 
       this.driver = driver();
       this.connection = this.driver.connect(_config).then(function () {
+        function finishRunningBeginSession() {
+          self.runningBeginSession = false;
+        }
+
         if (_config.setupSession) {
           self.runningBeginSession = true;
-
-          function finishRunningBeginSession() {
-            self.runningBeginSession = false;
-          }
-
           return _config.setupSession(self).then(finishRunningBeginSession, finishRunningBeginSession);
         }
       });

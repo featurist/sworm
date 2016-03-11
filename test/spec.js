@@ -1,4 +1,3 @@
-var debug = require("debug")("sworm");
 var chai = require("chai");
 var expect = chai.expect;
 var chaiAsPromised = require("chai-as-promised");
@@ -130,10 +129,15 @@ function describeDatabase(name, config) {
         db = sworm.db(config);
         statements = [];
 
-        db.log = function(sql, params, results) {
-          debug(sql, params, results);
+        db.log = function(sql) {
+          var originalLog = this.log;
+          this.log = undefined;
+
           var match = /^(insert|update|delete|select)/.exec(sql);
-          return statements.push(match[1]);
+          statements.push(match[1]);
+
+          this.logResults.apply(this, arguments);
+          this.log = originalLog;
         };
 
         return clearTables().then(function() {
@@ -784,6 +788,7 @@ function describeDatabase(name, config) {
         it("one to many relationships with functions aren't saved twice", function() {
           var bob;
           var jane;
+
           var rueDEssert = address({
             address: "15, Rue d'Essert",
             people: function() {

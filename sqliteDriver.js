@@ -16,7 +16,7 @@ module.exports = function() {
         });
       }
 
-      if (options && options.statement) {
+      if (options && (options.statement || options.insert)) {
         return new Promise(function (fulfil, reject) {
           debug(query, sqliteParams);
           self.connection.run(query, sqliteParams, function (error, result) {
@@ -40,6 +40,12 @@ module.exports = function() {
       }
     },
 
+    insert: function(query, params, options) {
+      return this.query(query, params, options).then(function (rows) {
+        return rows.lastId;
+      });
+    },
+
     connect: function(config) {
       var self = this;
 
@@ -57,14 +63,6 @@ module.exports = function() {
       return promisify(function (cb) {
         return self.connection.close(cb);
       });
-    },
-
-    outputId: function() {
-      return '';
-    },
-
-    insertedId: function(result) {
-      return result.lastId;
     }
   };
 };

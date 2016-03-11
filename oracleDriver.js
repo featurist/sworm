@@ -11,7 +11,7 @@ module.exports = function () {
 
       var results = this.execute(replaceParameters(query, params), params);
 
-      if (options && options.statement) {
+      if (options && (options.statement || options.insert)) {
         return results;
       } else {
         return results.then(function (r) {
@@ -27,6 +27,14 @@ module.exports = function () {
         return params
           ? self.connection.execute(query, params, cb)
           : self.connection.execute(query, cb);
+      });
+    },
+
+    insert: function(query, params, options) {
+      var id = options.id;
+
+      return this.query(query + " returning " + id + " into :returning_into_id", params, options).then(function (rows) {
+        return rows.outBinds.returning_into_id[0];
       });
     },
 
@@ -57,10 +65,6 @@ module.exports = function () {
       });
     },
 
-    outputId: function (id) {
-      return " returning " + id + " into :returning_into_id";
-    },
-
     insertEmpty: function(table, id) {
       return 'insert into ' + table + ' (' + id + ') values (default)';
     },
@@ -69,10 +73,6 @@ module.exports = function () {
       return {
         returning_into_id: { type: idType || oracledb.NUMBER, dir: oracledb.BIND_OUT }
       };
-    },
-
-    insertedId: function (rows) {
-      return rows.outBinds.returning_into_id[0];
     }
   };
 };

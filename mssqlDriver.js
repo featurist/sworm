@@ -30,16 +30,16 @@ module.exports = function() {
       });
     },
 
+    insert: function(query, params, options) {
+      var id = options.id;
+
+      return this.query(query + "; select scope_identity() as " + id, params).then(function (rows) {
+        return rows[0][id];
+      });
+    },
+
     close: function() {
       return this.connection.close();
-    },
-
-    outputId: function(id) {
-      return "; select scope_identity() as " + id;
-    },
-
-    insertedId: function(rows, id) {
-      return rows[0][id];
     }
   };
 };

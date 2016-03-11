@@ -27,6 +27,12 @@ module.exports = function() {
       });
     },
 
+    insert: function(query, params) {
+      return this.query(query + "; select last_insert_id() as id", params).then(function (rows) {
+        return rows[1][0].id;
+      });
+    },
+
     connect: function(config) {
       var self = this;
 
@@ -42,16 +48,8 @@ module.exports = function() {
       return this.connection.end();
     },
 
-    outputId: function() {
-      return "; select last_insert_id() as id";
-    },
-
     insertEmpty: function(table) {
       return 'insert into ' + table + ' () values ()';
-    },
-
-    insertedId: function(rows) {
-      return rows[1][0].id;
     }
   };
 };
