@@ -610,6 +610,27 @@ function describeDatabase(name, config) {
           });
         });
 
+        it("can save a shared foreign object", function() {
+          var essert = address({
+            address: "15, Rue d'Essert"
+          });
+
+          var bob = person({
+            name: "bob",
+            address: essert
+          });
+
+          var jane = person({
+            name: "jane",
+            address: essert
+          });
+
+          return Promise.all([bob.save(), jane.save()]).then(function() {
+            expect(bob.address_id).to.equal(essert.id);
+            expect(jane.address_id).to.equal(essert.id);
+          });
+        });
+
         it("can save a many to one relationship with function", function() {
           var bobsAddress;
           var bob = person({

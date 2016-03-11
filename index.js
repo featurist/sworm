@@ -109,11 +109,11 @@ var rowBase = function() {
     }
   }
 
-  function saveManyToOne(obj, field) {
+  function saveManyToOne(obj, field, options) {
     var value = foreignField(obj, field);
 
     if (value && !(value instanceof Array)) {
-      return value.save().then(function () {
+      return value.save(options).then(function () {
         var foreignId =
           obj._meta.foreignKeyFor ?
             obj._meta.foreignKeyFor(field) :
@@ -128,27 +128,27 @@ var rowBase = function() {
     }
   }
 
-  function saveManyToOnes(obj) {
+  function saveManyToOnes(obj, options) {
     return Promise.all(foreignFieldsForObject(obj).map(function (field) {
-      return saveManyToOne(obj, field);
+      return saveManyToOne(obj, field, options);
     }));
   }
 
-  function saveOneToMany(obj, field) {
+  function saveOneToMany(obj, field, options) {
     var items = foreignField(obj, field);
 
     if (items instanceof Array) {
       return Promise.all(items.map(function (item) {
-        return item.save();
+        return item.save(options);
       }));
     } else {
       return Promise.resolve();
     }
   }
 
-  function saveOneToManys(obj) {
+  function saveOneToManys(obj, options) {
     return Promise.all(foreignFieldsForObject(obj).map(function (field) {
-      return saveOneToMany(obj, field);
+      return saveOneToMany(obj, field, options);
     }));
   }
 
@@ -168,27 +168,51 @@ var rowBase = function() {
       var self = this;
       var force = options && options.hasOwnProperty('force')? options.force: false;
 
-      if (!self._saving) {
-        self.setSaving(true);
+      var waitForOneToManys;
+      var oneToManyPromises;
 
-        return saveManyToOnes(this).then(function () {
+      if (typeof options == 'object' && options.hasOwnProperty('oneToManyPromises')) {
+        waitForOneToManys = false;
+        oneToManyPromises = options.oneToManyPromises;
+      } else {
+        waitForOneToManys = true;
+        oneToManyPromises = [];
+      }
+
+      if (!self._saving) {
+        self.setSaving(saveManyToOnes(this, {oneToManyPromises: oneToManyPromises}).then(function () {
           if (self.changed() || force) {
             var writePromise = self.saved() ? update(self) : insert(self);
 
             return writePromise.then(function () {
-              return saveOneToManys(self);
+              return {
+                oneToManys: saveOneToManys(self, {oneToManyPromises: oneToManyPromises})
+              };
             });
           } else {
-            return saveOneToManys(self);
+            return {
+              oneToManys: saveOneToManys(self, {oneToManyPromises: oneToManyPromises})
+            };
           }
-        }).then(function () {
+        }).then(function (value) {
           self.setSaving(false);
+          return value;
         }, function (error) {
           self.setSaving(false);
           throw error;
+        }));
+      }
+
+      oneToManyPromises.push(self._saving.then(function (r) {
+        return r.oneToManys;
+      }));
+
+      if (waitForOneToManys) {
+        return self._saving.then(function () {
+          return Promise.all(oneToManyPromises);
         });
       } else {
-        return Promise.resolve();
+        return self._saving;
       }
     },
 
@@ -214,7 +238,7 @@ var rowBase = function() {
     setSaving: function(saving) {
       if (saving) {
         Object.defineProperty(this, "_saving", {
-          value: true,
+          value: saving,
           configurable: true
         });
       } else {
