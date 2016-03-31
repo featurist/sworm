@@ -180,6 +180,19 @@ Connection options:
       }
       ```
 
+      The driver also supports oracledb connection pooling, pass the pool in the config:
+
+      ```js
+      {
+        pool: pool // from oracledb.createPool(config, cb),
+
+        options: {
+          // options to set on `oracledb`
+          maxRows: 1000
+        }
+      }
+      ```
+
     * **sqlite**
 
       See: [https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback](https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback)
