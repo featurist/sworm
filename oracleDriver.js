@@ -41,9 +41,9 @@ module.exports = function () {
     connect: function (config) {
       var self = this;
 
-      if (config.options) {
-        Object.keys(config.options).forEach(function (key) {
-          oracledb[key] = config.options[key];
+      if (config.config.options) {
+        Object.keys(config.config.options).forEach(function (key) {
+          oracledb[key] = config.config.options[key];
         });
       }
 
