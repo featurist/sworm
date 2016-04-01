@@ -1,6 +1,6 @@
 {
   "name": "sworm",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "description": "a lightweight write-only ORM for MSSQL, MySQL, PostgreSQL, Oracle, Sqlite 3",
   "main": "index.js",
   "directories": {
