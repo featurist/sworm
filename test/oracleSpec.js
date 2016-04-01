@@ -93,7 +93,9 @@ var database = {
   driverModuleName: "oracledb"
 };
 
-describeDatabase("oracle", {
-  driver: "oracle",
-  config: { user: "system", password: "oracle", connectString: `${dockerHostname}/XE` }
-}, database);
+if (!process.env.TRAVIS) {
+  describeDatabase("oracle", {
+    driver: "oracle",
+    config: { user: "system", password: "oracle", connectString: `${dockerHostname}/XE` }
+  }, database);
+}

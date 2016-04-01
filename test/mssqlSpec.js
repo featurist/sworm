@@ -74,7 +74,9 @@ var database = {
   driverModuleName: "mssql"
 };
 
-describeDatabase("mssql", {
-  driver: "mssql",
-  config: { user: "user", password: "password", server: "windows", database: "mssqlOrm" }
-}, database);
+if (!process.env.TRAVIS) {
+  describeDatabase("mssql", {
+    driver: "mssql",
+    config: { user: "user", password: "password", server: "windows", database: "mssqlOrm" }
+  }, database);
+}
