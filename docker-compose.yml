@@ -1,0 +1,19 @@
+version: '2'
+
+services:
+  oracle:
+    image: wnameless/oracle-xe-11g
+    ports:
+      - "1521:1521"
+  mysql:
+    image: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+  postgres:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=password

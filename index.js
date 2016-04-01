@@ -5,8 +5,9 @@ var pgDriver = require("./pgDriver");
 var mysqlDriver = require("./mysqlDriver");
 var oracleDriver = require("./oracleDriver");
 var sqliteDriver = require("./sqliteDriver");
-var debugQuery = require("debug")("sworm");
+var debug = require("debug")("sworm");
 var debugResults = require("debug")("sworm:results");
+var redactConfig = require('./redactConfig');
 
 var rowBase = function() {
   function fieldsForObject(obj) {
@@ -294,7 +295,7 @@ exports.db = function(config) {
         id: id,
         db: this,
         foreignKeyFor: foreignKeyFor,
-        compoundKey: id instanceof Array
+        compoundKey: id == false || id instanceof Array
       };
 
       var modelPrototype = _.extend(Object.create(rowBase), modelConfig);
@@ -351,7 +352,7 @@ exports.db = function(config) {
     },
 
     logError: function(query, params, error) {
-      debugQuery(query, params, error);
+      debug(query, params, error);
     },
 
     logResults: function(query, params, results, options) {
@@ -359,9 +360,9 @@ exports.db = function(config) {
           return this.log(query, params, results, options);
         } else {
           if (params) {
-            debugQuery(query, params);
+            debug(query, params);
           } else {
-            debugQuery(query);
+            debug(query);
           }
 
           if (options && options.insert) {
@@ -402,7 +403,10 @@ exports.db = function(config) {
       }
 
       this.driver = driver();
+
+      debug('connecting to', redactConfig(_config));
       this.connection = this.driver.connect(_config).then(function () {
+        debug('connected to', redactConfig(_config));
         function finishRunningBeginSession() {
           self.runningBeginSession = false;
         }

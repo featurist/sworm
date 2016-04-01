@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "debug": "2.2.0",
+    "redact-url": "0.3.1",
     "underscore": "1.8.1"
   },
   "devDependencies": {
