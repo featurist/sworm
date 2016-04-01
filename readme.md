@@ -559,3 +559,16 @@ db.query(sql, parameters, [options])
 * SQLite3
   `exec` runs the `exec()` method on the connection, see [exec](https://github.com/mapbox/node-sqlite3/wiki/API#databaseexecsql-callback). Note that this method ignores any query `parameters` passed in.
 
+# Development
+
+## Tests
+
+The only thing slightly awkward about this project are the test environments for each database. I've tried to make this as easy as possible however:
+
+* sqlite3 works out of the box on most if not all platforms
+* mysql, postgres and oracle instances can be found in the `docker-compose.yml` file. Install docker, make it run somehow, then run `docker-compose up -d`. This will download and start each of the databases necessary to run the tests. The tests look for the `$DOCKER_HOST` environment variable to see where the docker host is, if it's in a VM or somewhere else, otherwise the databases are expected to be on localhost, running on their default ports.
+* mssql is less friendly, and all I ask is that it's running on a machine called `windows` (hack your `/etc/hosts` file if necessary), with a fresh database called `sworm`, with user `user` and password `password`.
+
+Each database can be tested individually by running `mocha test/{mssql,mysql,postgres,oracle,sqlite}Spec.js`. All of them with simply `npm test`.
+
+Nevertheless, this project is almost entirely covered with tests and I expect any pull request to have tests that demonstrate any new feature or bugfix.
