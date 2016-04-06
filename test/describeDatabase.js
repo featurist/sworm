@@ -6,7 +6,7 @@ var chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 var _ = require("underscore");
 
-module.exports = function(name, config, database) {
+module.exports = function(name, config, database, otherTests) {
   describe(name, function() {
     describe("missing modules", function() {
       var moduleName = __dirname + "/../node_modules/" + database.driverModuleName;
@@ -50,6 +50,10 @@ module.exports = function(name, config, database) {
           return Promise.all(tables.map(function (table) {
             return db.query('delete from ' + table);
           }));
+        }
+
+        if (otherTests) {
+          otherTests();
         }
 
         beforeEach(function() {

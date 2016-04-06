@@ -557,7 +557,7 @@ db.query(sql, parameters, [options])
 ```
 
 * SQLite3
-  `exec` runs the `exec()` method on the connection, see [exec](https://github.com/mapbox/node-sqlite3/wiki/API#databaseexecsql-callback). Note that this method ignores any query `parameters` passed in.
+  * `multiline` or `exec` runs the `exec()` method on the connection which executes multiple lines, see [exec](https://github.com/mapbox/node-sqlite3/wiki/API#databaseexecsql-callback). Note that this method ignores any query `parameters` passed in.
 
 # Development
 

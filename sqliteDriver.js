@@ -19,7 +19,7 @@ module.exports = function() {
       if (options && (options.statement || options.insert)) {
         return new Promise(function (fulfil, reject) {
           debug(query, sqliteParams);
-          self.connection.run(query, sqliteParams, function (error, result) {
+          self.connection.run(query, sqliteParams, function (error) {
             if (error) {
               reject(error);
             } else {
@@ -27,7 +27,7 @@ module.exports = function() {
             }
           });
         });
-      } else if (options && options.exec) {
+      } else if (options && (options.exec || options.multiline)) {
         return promisify(function (cb) {
           debug(query, sqliteParams);
           self.connection.exec(query, cb);

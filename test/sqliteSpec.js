@@ -1,4 +1,6 @@
 var describeDatabase = require('./describeDatabase');
+var expect = require('chai').expect;
+var sworm = require('..');
 
 var database = {
   createTables: function(db, tables) {
@@ -55,7 +57,30 @@ var database = {
   driverModuleName: "sqlite3"
 };
 
-describeDatabase("sqlite", {
+var config = {
   driver: "sqlite",
   config: { filename: __dirname + "/test.db" }
-}, database);
+};
+
+describeDatabase("sqlite", config, database, function () {
+  describe('options', function () {
+    it.only('can pass options to query', function () {
+      var db = sworm.db(config);
+
+      return db.query('delete from blah').then(() => {
+        return db.query(`
+          create table if not exists blah ( x integer not null, y integer not null );
+          insert into blah (x, y) values (1, 2);
+          insert into blah (x, y) values (2, 3);
+        `, {}, {multiline: true});
+      }).then(() => {
+        return db.query('select * from blah').then(rows => {
+          expect(rows).to.eql([
+            { x: 1, y: 2 },
+            { x: 2, y: 3 } 
+          ]);
+        });
+      });
+    });
+  });
+});
