@@ -44,27 +44,29 @@ var rowBase = function() {
   }
 
   function insert(obj) {
-    var keys = fieldsForObject(obj);
-    var statementString = insertStatement(obj, keys);
+    return obj._meta.db.whenConnected(function () {
+      var keys = fieldsForObject(obj);
+      var statementString = insertStatement(obj, keys);
 
-    var params = _.pick(obj, keys);
+      var params = _.pick(obj, keys);
 
-    if (obj._meta.db.driver.outputIdKeys && !obj._meta.compoundKey) {
-      params = _.extend(params, obj._meta.db.driver.outputIdKeys(obj._meta.idType));
-    }
-
-    return obj._meta.db.query(statementString, params, {
-      insert: !obj._meta.compoundKey,
-      statement: obj._meta.compoundKey,
-      id: obj._meta.id
-    }).then(function (insertedId) {
-      obj.setSaved();
-
-      if (!obj._meta.compoundKey) {
-        obj[obj._meta.id] = insertedId;
+      if (obj._meta.db.driver.outputIdKeys && !obj._meta.compoundKey) {
+        params = _.extend(params, obj._meta.db.driver.outputIdKeys(obj._meta.idType));
       }
 
-      return obj.setNotChanged();
+      return obj._meta.db.query(statementString, params, {
+        insert: !obj._meta.compoundKey,
+        statement: obj._meta.compoundKey,
+        id: obj._meta.id
+      }).then(function (insertedId) {
+        obj.setSaved();
+
+        if (!obj._meta.compoundKey) {
+          obj[obj._meta.id] = insertedId;
+        }
+
+        return obj.setNotChanged();
+      });
     });
   }
 
@@ -330,7 +332,7 @@ exports.db = function(config) {
     query: function(query, params, options) {
       var self = this;
 
-      function runQuery() {
+      return this.whenConnected(function () {
         var command = options && options.insert
           ? self.driver.insert(query, params, options)
           : self.driver.query(query, params, options)
@@ -342,12 +344,14 @@ exports.db = function(config) {
           self.logError(query, params, e);
           throw e;
         });
-      }
+      });
+    },
 
+    whenConnected: function(fn) {
       if (this.runningBeginSession) {
-        return runQuery();
+        return fn();
       } else {
-        return this.connect().then(runQuery);
+        return this.connect().then(fn);
       }
     },
 

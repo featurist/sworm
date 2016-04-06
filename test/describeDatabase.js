@@ -112,6 +112,27 @@ module.exports = function(name, config, database) {
           });
         });
 
+        it("can insert without connecting", function() {
+          var db = sworm.db(config);
+          var person = db.model({
+            table: 'people'
+          });
+          var p = person({
+              name: "bob"
+          });
+          return p.save().then(function() {
+            expect(p.id).to.exist;
+
+            return db.query("select * from people").then(function(people) {
+              return expect(database.clean(people)).to.eql([{
+                id: p.id,
+                name: "bob",
+                address_id: null
+              }]);
+            });
+          });
+        });
+
         it("can insert emtpy rows", function() {
           var personWeirdId = db.model({
             table: "people_weird_id",
