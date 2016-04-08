@@ -104,7 +104,7 @@ var config = {
 if (!process.env.TRAVIS) {
   describeDatabase("oracle", config, database, function () {
     describe('options', function () {
-      it.only('can pass options to query', function () {
+      it('can pass options to query', function () {
         var db = sworm.db(config);
         var person = db.model({table: 'people'});
 
