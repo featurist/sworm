@@ -81,8 +81,10 @@ module.exports = function() {
 
     close: function() {
       if (this.done) {
-        return this.done();
+        this.done();
       }
+
+      return Promise.resolve();
     }
   };
 };
