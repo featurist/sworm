@@ -558,6 +558,9 @@ db.query(sql, parameters, [options])
 
 * SQLite3
   * `multiline` or `exec` runs the `exec()` method on the connection which executes multiple lines, see [exec](https://github.com/mapbox/node-sqlite3/wiki/API#databaseexecsql-callback). Note that this method ignores any query `parameters` passed in.
+* Oracle
+  * `formatRows` if `false` will not format rows as lower case and will return the raw `oracledb` results. Formatting rows may be a performance issue for large result sets.
+  * any other options are passed to `oracledb`'s [`execute` method](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-4233-execute-options).
 
 # Development
 

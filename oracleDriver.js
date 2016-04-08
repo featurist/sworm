@@ -1,17 +1,16 @@
 var optionalRequire = require('./optionalRequire');
 var promisify = require('./promisify');
 var debug = require('debug')('sworm:oracle');
+var _ = require('underscore');
 
 module.exports = function () {
   var oracledb = optionalRequire('oracledb');
 
   return {
     query: function (query, params, options) {
-      var self = this;
+      var results = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options));
 
-      var results = this.execute(replaceParameters(query, params), params);
-
-      if (options && (options.statement || options.insert)) {
+      if (options && (options.statement || options.insert || options.formatRows == false)) {
         return results;
       } else {
         return results.then(function (r) {
@@ -20,13 +19,11 @@ module.exports = function () {
       }
     },
 
-    execute: function (query, params) {
+    execute: function (query, params, options) {
       var self = this;
       debug(query, params);
       return promisify(function (cb) {
-        return params
-          ? self.connection.execute(query, params, cb)
-          : self.connection.execute(query, cb);
+        self.connection.execute(query, params || {}, options, cb)
       });
     },
 
@@ -109,12 +106,8 @@ function formatRows(resultSet) {
   }
 }
 
-function replaceParameters(query, params) {
+function replaceParameters(query) {
   return query.replace(/@([a-z_0-9]+)\b/gi, function (_, paramName) {
-    if (!params.hasOwnProperty(paramName)) {
-      throw new Error ('no such parameter @' + paramName);
-    }
-
     return ':' + paramName;
   });
 }

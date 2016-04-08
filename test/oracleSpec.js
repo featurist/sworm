@@ -1,5 +1,8 @@
 var dockerHostname = require('./dockerHostname');
 var describeDatabase = require('./describeDatabase');
+var sworm = require('..');
+var oracledb = require('oracledb');
+var expect = require('chai').expect;
 
 var database = {
   createTables: function(db, tables) {
@@ -93,9 +96,32 @@ var database = {
   driverModuleName: "oracledb"
 };
 
+var config = {
+  driver: "oracle",
+  config: { user: "system", password: "oracle", connectString: `${dockerHostname}/XE` }
+};
+
 if (!process.env.TRAVIS) {
-  describeDatabase("oracle", {
-    driver: "oracle",
-    config: { user: "system", password: "oracle", connectString: `${dockerHostname}/XE` }
-  }, database);
+  describeDatabase("oracle", config, database, function () {
+    describe('options', function () {
+      it.only('can pass options to query', function () {
+        var db = sworm.db(config);
+        var person = db.model({table: 'people'});
+
+        var bob = person({
+          name: 'bob'
+        });
+
+        return bob.save().then(() => {
+          return db.query('select * from people', {}, {formatRows: false, outFormat: oracledb.OBJECT}).then(rows => {
+            expect(rows.metaData).to.eql([
+              {name: 'ID'},
+              {name: 'NAME'},
+              {name: 'ADDRESS_ID'}
+            ]);
+          });
+        });
+      });
+    });
+  });
 }
