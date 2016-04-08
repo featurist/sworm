@@ -45,7 +45,8 @@ module.exports = function() {
     },
 
     close: function() {
-      return this.connection.end();
+      var self = this;
+      return promisify(function (cb) { self.connection.end(cb); });
     },
 
     insertEmpty: function(table) {
