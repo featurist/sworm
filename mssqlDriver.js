@@ -39,7 +39,8 @@ module.exports = function() {
     },
 
     close: function() {
-      return this.connection.close();
+      this.connection.close();
+      return Promise.resolve();
     }
   };
 };
