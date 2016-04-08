@@ -1,6 +1,7 @@
 var promisify = require('./promisify');
 var optionalRequire = require("./optionalRequire");
 var debug = require('debug')('sworm:pg');
+var urlUtils = require('url');
 
 module.exports = function() {
   var pg = optionalRequire("pg");
@@ -53,17 +54,29 @@ module.exports = function() {
 
     connect: function(config) {
       var self = this;
-      return new Promise(function(result, error) {
-        return pg.connect(config.url, function(err, client, done) {
-          if (err) {
-            return error(err);
-          } else {
-            self.client = client;
-            self.done = done;
-            return result();
-          }
+      var options = connectionOptions(config);
+
+      if (options.pool) {
+        return new Promise(function(result, error) {
+          pg.connect(config.url || config.config, function(err, client, done) {
+            if (err) {
+              return error(err);
+            } else {
+              self.client = client;
+              self.done = done;
+              return result();
+            }
+          });
         });
-      });
+      } else {
+        self.client = new pg.Client(config.url || config.config);
+        self.done = function () {
+          self.client.end();
+        };
+        return promisify(function (cb) {
+          self.client.connect(cb);
+        });
+      }
     },
 
     close: function() {
@@ -73,3 +86,11 @@ module.exports = function() {
     }
   };
 };
+
+function connectionOptions(config) {
+  if (config.url) {
+    return urlUtils.parse(config.url, true).query;
+  } else {
+    return config.config;
+  }
+}
