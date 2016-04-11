@@ -166,7 +166,7 @@ var rowBase = function() {
 
   return {
     save: function(options) {
-      this._meta.db.ensureConnected();
+      this._meta.db.ensureConfigured();
 
       var self = this;
       var force = options && options.hasOwnProperty('force')? options.force: false;
@@ -377,22 +377,32 @@ exports.db = function(config) {
         }
     },
 
-    ensureConnected: function() {
+    ensureConfigured: function() {
       if (!this.config) {
         throw new Error('sworm has not been configured to a database, use db.connect(config) or sworm.db(config)');
       }
     },
 
-    connect: function (config) {
+    connected: false,
+
+    connect: function (config, fn) {
+      if (typeof config === 'function') {
+        fn = config;
+        config = undefined;
+      }
+      if (config) {
+        this.config = config;
+      }
+
       var self = this;
 
       if (this.connection) {
         return this.connection;
       }
 
-      var _config = this.config = config || this.config;
+      this.ensureConfigured();
 
-      this.ensureConnected();
+      debug('connecting to', redactConfig(this.config));
 
       var driver = {
           mssql: mssqlDriver,
@@ -400,32 +410,54 @@ exports.db = function(config) {
           mysql: mysqlDriver,
           oracle: oracleDriver,
           sqlite: sqliteDriver
-      }[_config.driver];
+      }[this.config.driver];
 
       if (!driver) {
-          throw new Error("no such driver: `" + _config.driver + "'");
+          throw new Error("no such driver: `" + this.config.driver + "'");
       }
 
       this.driver = driver();
 
-      debug('connecting to', redactConfig(_config));
-      this.connection = this.driver.connect(_config).then(function () {
-        debug('connected to', redactConfig(_config));
-        function finishRunningBeginSession() {
-          self.runningBeginSession = false;
-        }
+      this.connection = this.driver.connect(this.config).then(function () {
+        debug('connected to', redactConfig(self.config));
+        self.connected = true;
 
-        if (_config.setupSession) {
+        if (self.config.setupSession) {
           self.runningBeginSession = true;
-          return _config.setupSession(self).then(finishRunningBeginSession, finishRunningBeginSession);
+          return self.config.setupSession(self).then(function (result) {
+            self.runningBeginSession = false;
+            return result;
+          }, function (error) {
+            self.runningBeginSession = false;
+            throw error;
+          });
         }
       });
-      return this.connection;
+
+      if (!fn) {
+        return this.connection;
+      } else {
+        return this.connection.then(function () {
+          return fn();
+        }).then(function (result) {
+          return self.close().then(function () {
+            return result;
+          });
+        }, function (error) {
+          return self.close().then(function () {
+            throw error;
+          });
+        });
+      }
     },
 
     close: function() {
+      var self = this;
+
       if (this.driver) {
-        return this.driver.close();
+        return this.driver.close().then(function () {
+          self.connected = false;
+        });
       } else {
         return Promise.resolve();
       }

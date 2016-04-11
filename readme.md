@@ -72,6 +72,15 @@ Produces:
 Connect:
 
 ```js
+db.connect(config? : {}, fn? : () -> Promise);
+```
+
+* `config` database connection configuration, see below
+* `fn` if passed, `connect()` will connect to the database, run the function, then disconnect. Ensure that `fn` returns a promise.
+
+You can pass connection configuration to the `sworm.db()` function, or to the `db.connect()` function.
+
+```js
 var sworm = require('sworm');
 
 var db = sworm.db({
@@ -112,6 +121,30 @@ db.connect({
 }).then(function () {
 
   ...
+
+});
+```
+
+Or connect, run some code and then disconnect:
+
+```js
+var sworm = require('sworm');
+
+var db = sworm.db(config);
+
+var person = db.model({table: 'people'});
+
+db.connect(function () {
+
+  // connected
+
+  var bob = person({name: 'bob'});
+  return bob.save().then(function () {
+    ...
+  });
+}).then(function () {
+  
+  // disconnected
 
 });
 ```

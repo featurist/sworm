@@ -137,6 +137,22 @@ module.exports = function(name, config, database, otherTests) {
           });
         });
 
+        it('can run a function then disconnect', function () {
+          var db = sworm.db(config);
+
+          expect(db.connected).to.be.false;
+
+          return db.connect(function () {
+            expect(db.connected).to.be.true;
+
+            return db.query('select * from people').then(people => {
+              expect(people).to.eql([]);
+            });
+          }).then(() => {
+            expect(db.connected).to.be.false;
+          });
+        });
+
         it("can insert emtpy rows", function() {
           var personWeirdId = db.model({
             table: "people_weird_id",

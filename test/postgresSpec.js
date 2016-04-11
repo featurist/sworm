@@ -117,45 +117,47 @@ var database = {
 };
 
 describeDatabase("postgres", urlConfig('sworm'), database, function () {
-  var db;
+  describe('config options', function () {
+    var db;
 
-  afterEach(function () {
-    return db.close();
-  });
+    afterEach(function () {
+      return db.close();
+    });
 
-  describe('connection pooling', function () {
-    it("doesn't pool connections normally", function () {
-      var poolsBefore = Object.keys(pg.pools.all).length;
-      db = sworm.db(urlConfig('sworm'));
-      return db.query('select * from people').then((rows) => {
-        expect(rows).to.eql([]);
-        expect(Object.keys(pg.pools.all).length).to.equal(poolsBefore);
+    describe('connection pooling', function () {
+      it("doesn't pool connections normally", function () {
+        var poolsBefore = Object.keys(pg.pools.all).length;
+        db = sworm.db(urlConfig('sworm'));
+        return db.query('select * from people').then((rows) => {
+          expect(rows).to.eql([]);
+          expect(Object.keys(pg.pools.all).length).to.equal(poolsBefore);
+        });
+      });
+
+      it("pools connections when pool: true", function () {
+        var poolsBefore = Object.keys(pg.pools.all).length;
+        db = sworm.db(config('sworm', {pool: true}));
+        return db.query('select * from people').then((rows) => {
+          expect(rows).to.eql([]);
+          expect(Object.keys(pg.pools.all).length).to.equal(poolsBefore + 1);
+        });
+      });
+
+      it("pools connections when &pool=true", function () {
+        var poolsBefore = Object.keys(pg.pools.all).length;
+        db = sworm.db(urlConfig('sworm', {pool: true}));
+        return db.query('select * from people').then((rows) => {
+          expect(rows).to.eql([]);
+          expect(Object.keys(pg.pools.all).length).to.equal(poolsBefore + 1);
+        });
       });
     });
 
-    it("pools connections when pool: true", function () {
-      var poolsBefore = Object.keys(pg.pools.all).length;
-      db = sworm.db(config('sworm', {pool: true}));
+    it('can connect using config object', function () {
+      db = sworm.db(config('sworm'));
       return db.query('select * from people').then((rows) => {
         expect(rows).to.eql([]);
-        expect(Object.keys(pg.pools.all).length).to.equal(poolsBefore + 1);
       });
-    });
-
-    it("pools connections when &pool=true", function () {
-      var poolsBefore = Object.keys(pg.pools.all).length;
-      db = sworm.db(urlConfig('sworm', {pool: true}));
-      return db.query('select * from people').then((rows) => {
-        expect(rows).to.eql([]);
-        expect(Object.keys(pg.pools.all).length).to.equal(poolsBefore + 1);
-      });
-    });
-  });
-
-  it('can connect using config object', function () {
-    db = sworm.db(config('sworm'));
-    return db.query('select * from people').then((rows) => {
-      expect(rows).to.eql([]);
     });
   });
 });
