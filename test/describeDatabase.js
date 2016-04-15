@@ -64,7 +64,7 @@ module.exports = function(name, config, database, otherTests) {
             var originalLog = this.log;
             this.log = undefined;
 
-            var match = /^(insert|update|delete|select)/.exec(sql);
+            var match = /^[a-z]*/i.exec(sql);
             statements.push(match[1]);
 
             this.logResults.apply(this, arguments);
@@ -168,6 +168,126 @@ module.exports = function(name, config, database, otherTests) {
                 name: null,
                 address_weird_id: null
               }]);
+            });
+          });
+        });
+
+        describe.only('transactions', function () {
+          describe('rollback', function () {
+            describe('explicit', function () {
+              it('rolls back when rollback is called', function () {
+                return db.begin().then(function () {
+                  var bob = person({ name: 'bob' });
+                  return bob.save().then(() => {
+                    return db.query('select * from people');
+                  }).then(people => {
+                    expect(people).to.eql([
+                      {
+                        id: bob.id,
+                        name: 'bob',
+                        address_id: null
+                      }
+                    ]);
+                  }).then(() => {
+                    return db.rollback();
+                  }).then(() => {
+                    return db.query('select * from people');
+                  }).then(people => {
+                    expect(people).to.eql([
+                    ]);
+                  });
+                });
+              });
+            });
+
+            describe('scoped', function () {
+              it.only('rolls back if the transaction scope throws an exception', function () {
+                return expect(db.transaction(function () {
+                  var bob = person({ name: 'bob' });
+                  return bob.save().then(() => {
+                    return db.query('select * from people');
+                  }).then(people => {
+                    expect(people).to.eql([
+                      {
+                        id: bob.id,
+                        name: 'bob',
+                        address_id: null
+                      }
+                    ]);
+
+                    throw new Error('uh oh');
+                  });
+                })).to.be.rejectedWith('uh oh').then(() => {
+                  return db.query('select * from people');
+                }).then(people => {
+                  expect(people).to.eql([
+                  ]);
+                });
+              });
+            });
+          });
+
+          describe('commit', function () {
+            describe('explicit', function () {
+              it('makes changes after commit is called', function () {
+                return db.begin().then(function () {
+                  var bob = person({ name: 'bob' });
+                  return bob.save().then(() => {
+                    return db.query('select * from people');
+                  }).then(people => {
+                    expect(people).to.eql([
+                      {
+                        id: bob.id,
+                        name: 'bob',
+                        address_id: null
+                      }
+                    ]);
+                  }).then(() => {
+                    return db.commit();
+                  }).then(() => {
+                    return db.query('select * from people');
+                  }).then(people => {
+                    expect(people).to.eql([
+                      {
+                        id: bob.id,
+                        name: 'bob',
+                        address_id: null
+                      }
+                    ]);
+                  });
+                });
+              });
+            });
+
+            describe('scoped', function () {
+              it('makes changes after commit is called', function () {
+                var bob;
+
+                return db.transaction(function () {
+                  bob = person({ name: 'bob' });
+                  return bob.save().then(() => {
+                    return db.query('select * from people');
+                  }).then(people => {
+                    expect(people).to.eql([
+                      {
+                        id: bob.id,
+                        name: 'bob',
+                        address_id: null
+                      }
+                    ]);
+                  });
+                }).then(() => {
+                  return db.query('select * from people');
+                }).then(people => {
+                  expect(people).to.eql([
+                    {
+                      id: bob.id,
+                      name: 'bob',
+                      address_id: null
+                    }
+                  ]);
+                });
+              });
             });
           });
         });

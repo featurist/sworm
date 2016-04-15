@@ -38,7 +38,7 @@ module.exports = function() {
 
       return promisify(function(cb) {
         debug(query, paramList);
-        return self.client.query(query, paramList, cb);
+        return self.connection.query(query, paramList, cb);
       }).then(function(result) {
         return result.rows;
       });
@@ -52,6 +52,18 @@ module.exports = function() {
       });
     },
 
+    begin: function (options) {
+      return this.query('begin' + (options? ' ' + options: ''));
+    },
+
+    commit: function () {
+      return this.query('commit');
+    },
+
+    rollback: function () {
+      return this.query('rollback');
+    },
+
     connect: function(config) {
       var self = this;
       var options = connectionOptions(config);
@@ -62,19 +74,19 @@ module.exports = function() {
             if (err) {
               return error(err);
             } else {
-              self.client = client;
+              self.connection = client;
               self.done = done;
               return result();
             }
           });
         });
       } else {
-        self.client = new pg.Client(config.url || config.config);
+        self.connection = new pg.Client(config.url || config.config);
         self.done = function () {
-          self.client.end();
+          self.connection.end();
         };
         return promisify(function (cb) {
-          self.client.connect(cb);
+          self.connection.connect(cb);
         });
       }
     },

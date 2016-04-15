@@ -581,6 +581,85 @@ person.query('select * from people where id = @id', {id: 1}, function (people) {
 });
 ```
 
+# Statements
+
+Statements are just like queries but they don't bother to parse or log the results.
+
+```js
+db.statement(query, [params, [options]]);
+```
+
+# Transactions
+
+You can insert update or query the database using transactions. Transactions can be used in two forms, explicitly running `db.begin()`, `db.commit()` and `db.rollback()`, or by calling `db.transaction(fn)` with a function that will commit automatically if it didn't fail.
+
+The explicit form:
+
+```js
+db.begin().then(() => {
+  var bob = person({name: 'bob'});
+  return bob.save();
+}).then(() => {
+  db.rollback();
+  // or
+  db.commit();
+});
+```
+
+The implicit form:
+
+```js
+db.transaction(() => {
+  var bob = person({name: 'bob'});
+  return bob.save();
+});
+```
+
+```js
+db.begin([options]);
+```
+
+Begin the transaction
+
+* `options` a string that is appended to the database's `begin` command, for e.g. `db.begin('isolation level read committed')` will result in the sql `begin isolation level read committed`.
+
+```js
+db.rollback();
+```
+
+Rollback the transaction
+
+```js
+db.commit();
+```
+
+Commit the transaction
+
+```js
+db.transaction(options? : String, fn : () => Promise)
+```
+
+* `options` a string that is appended to the database's `begin` command, for e.g. `db.begin('isolation level read committed')` will result in the sql `begin isolation level read committed`.
+* `fn` a function that is executed after the transaction has begun. The function is expected to return a promise, if resolved, the transaction will be committed, if rejected, the transaction will be rolled back.
+
+```js
+db.transaction(() => {
+  // this transaction will be rolled back
+  return db.query('update people set name = @name', {name: 'jane'}).then(() => {
+    throw new Error('uh oh!');
+  });
+});
+
+db.transaction(() => {
+  // this transaction will be committed
+  return db.query('update people set name = @name', {name: 'jane'});
+});
+```
+
+# Accessing the Connection
+
+You can access the underlying driver's connection after the database has connected of course through `db.driver.connection`.
+
 ## Options
 
 You can pass options to the database driver when executing a query

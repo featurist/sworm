@@ -347,6 +347,11 @@ exports.db = function(config) {
       });
     },
 
+    statement: function(query, params, options) {
+      options = _.extend({statement: true}, options);
+      return this.query(query, params, options);
+    },
+
     whenConnected: function(fn) {
       if (this.runningBeginSession) {
         return fn();
@@ -449,6 +454,33 @@ exports.db = function(config) {
           });
         });
       }
+    },
+
+    transaction: function (options, fn) {
+      if (typeof options === 'function') {
+        fn = options;
+        options = undefined;
+      }
+
+      return this.begin(options).then(() => {
+        return fn();
+      }).then(r => {
+        return this.commit().then(() => r);
+      }, e => {
+        return this.rollback().then(() => { throw e; });
+      });
+    },
+
+    begin: function (options) {
+      return this.statement('begin' + (options? ' ' + options: ''));
+    },
+
+    commit: function () {
+      return this.statement('commit');
+    },
+
+    rollback: function () {
+      return this.statement('rollback');
     },
 
     close: function() {
