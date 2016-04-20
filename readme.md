@@ -236,7 +236,9 @@ Connection options:
       }
       ```
 
-  * `url` a connection URL passed to the postgres driver. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+  * `url` a connection URL, the following are supported
+    * `pg` - `postgres://user:password@host:5432/database`. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+    * `oracle` - `oracle://user:password@host:1521/sid`
   * `setupSession` a function that is passed the `db` to setup the session before any queries are run.
 
     ```js

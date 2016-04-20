@@ -3,21 +3,15 @@ var describeDatabase = require('./describeDatabase');
 var sworm = require('..');
 var _ = require('underscore');
 var expect = require('chai').expect;
-var urlUtils = require('url');
 var pg = require('pg');
-
-function addExtras(url, extras) {
-  var parsedUrl = urlUtils.parse(url, true);
-  _.extend(parsedUrl.query, extras);
-  return urlUtils.format(parsedUrl);
-}
+var addUrlParams = require('./addUrlParams');
 
 function urlConfig(name, extras) {
   name = name || '';
   var url = process.env.TRAVIS? `postgres://postgres@localhost/${name}`: `postgres://postgres:password@${dockerHostname}/${name}`;
 
   if (extras) {
-    url = addExtras(url, extras);
+    url = addUrlParams(url, extras);
   }
 
   return {

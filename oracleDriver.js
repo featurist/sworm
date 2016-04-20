@@ -2,9 +2,11 @@ var optionalRequire = require('./optionalRequire');
 var promisify = require('./promisify');
 var debug = require('debug')('sworm:oracle');
 var _ = require('underscore');
+var urlUtils = require('url');
 
 module.exports = function () {
   var oracledb = optionalRequire('oracledb');
+
 
   return {
     query: function (query, params, options) {
@@ -35,24 +37,47 @@ module.exports = function () {
       });
     },
 
-    connect: function (config) {
+    connect: function (_config) {
       var self = this;
+      var config = _config.url? parseUrl(_config.url): _config.config;
 
-      if (config.config.options) {
-        Object.keys(config.config.options).forEach(function (key) {
-          oracledb[key] = config.config.options[key];
+      if (config.options) {
+        Object.keys(config.options).forEach(function (key) {
+          oracledb[key] = config.options[key];
         });
       }
 
-      return promisify(function (cb) {
-        if (config.config.pool) {
-          config.config.pool.getConnection(cb);
+      function makeConnection() {
+        if (config.pool === true) {
+          return self.connectionPool(config).then(pool => {
+            return promisify(cb => pool.getConnection(cb));
+          });
+        } else if (config.pool) {
+          return promisify(cb => config.pool.getConnection(cb));
         } else {
-          oracledb.getConnection(config.config, cb);
+          return promisify(cb => oracledb.getConnection(config, cb));
         }
-      }).then(function (connection) {
+      }
+
+      return makeConnection().then(function (connection) {
         self.connection = connection;
       });
+    },
+
+    connectionPoolCache: {},
+
+    connectionPool: function(config) {
+      var key = JSON.stringify(config);
+
+      var value = this.connectionPoolCache[key];
+
+      if (!value) {
+        value = this.connectionPoolCache[key] = promisify(function (cb) {
+          oracledb.createPool(config, cb);
+        });
+      }
+
+      return value;
     },
 
     close: function () {
@@ -110,4 +135,45 @@ function replaceParameters(query) {
   return query.replace(/@([a-z_0-9]+)\b/gi, function (_, paramName) {
     return ':' + paramName;
   });
+}
+
+function parseValue(value) {
+  var number = Number(value);
+  if (!isNaN(number)) {
+    return number;
+  }
+  
+  if (value == 'true' || value == 'false') {
+    return value == 'true';
+  }
+
+  return value;
+}
+
+function parseOptions(options) {
+  var result = {};
+
+  Object.keys(options).forEach(key => {
+    result[key] = parseValue(options[key]);
+  });
+
+  return result;
+}
+
+function parseUrl(url) {
+  var u = urlUtils.parse(url, true);
+  var auth = u.auth? u.auth.split(':'): [];
+
+  var options = parseOptions(u.query);
+
+  var pool = options.pool;
+  delete options.pool;
+
+  return {
+    user: auth[0],
+    password: auth[1],
+    connectString: u.host + u.pathname,
+    pool: pool,
+    options: options
+  };
 }

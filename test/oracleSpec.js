@@ -4,6 +4,8 @@ if (!process.env.TRAVIS) {
   var sworm = require('..');
   var oracledb = require('oracledb');
   var expect = require('chai').expect;
+  var _ = require('underscore');
+  var addUrlParams = require('./addUrlParams');
 
   var database = {
     createTables: function(db, tables) {
@@ -97,15 +99,83 @@ if (!process.env.TRAVIS) {
     driverModuleName: "oracledb"
   };
 
-  var config = {
-    driver: "oracle",
-    config: { user: "system", password: "oracle", connectString: `${dockerHostname}/XE` }
-  };
+  function urlConfig(options) {
+    return {
+      driver: 'oracle',
+      url: addUrlParams(`oracle://system:oracle@${dockerHostname}:1521/XE`, options)
+    };
+  }
 
-  describeDatabase("oracle", config, database, function () {
+  function config(options) {
+    return {
+      driver: "oracle",
+      config: _.extend({
+        user: "system",
+        password: "oracle",
+        connectString: `${dockerHostname}:1521/XE`
+      }, options)
+    };
+  }
+
+  describeDatabase("oracle", config(), database, function () {
+    describe('connection pooling', function () {
+      var db;
+
+      afterEach(function () {
+        return db.close();
+      });
+
+      function numberOfPools() {
+        return db.driver? Object.keys(db.driver.connectionPoolCache).length: 0;
+      }
+
+      it("doesn't pool connections normally", function () {
+        db = sworm.db(urlConfig());
+        var poolsBefore = numberOfPools();
+        return db.query('select * from people').then((rows) => {
+          expect(rows).to.eql([]);
+          expect(Object.keys(numberOfPools()).length).to.equal(poolsBefore);
+        });
+      });
+
+      it("pools connections when pool: true", function () {
+        db = sworm.db(config({pool: true}));
+        var poolsBefore = numberOfPools();
+        return db.query('select * from people').then((rows) => {
+          expect(rows).to.eql([]);
+          expect(numberOfPools()).to.equal(poolsBefore + 1);
+        });
+      });
+
+      it("pools connections when &pool=true", function () {
+        db = sworm.db(urlConfig({pool: true}));
+        var poolsBefore = numberOfPools();
+        return db.query('select * from people').then((rows) => {
+          expect(rows).to.eql([]);
+          expect(numberOfPools()).to.equal(poolsBefore + 1);
+        });
+      });
+    });
+
+    describe('connection options', function () {
+      var db;
+
+      it('can pass connection options', function () {
+        oracledb.maxRows = 100;
+        db = sworm.db(urlConfig({maxRows: 100000}));
+        return db.connect().then(() => {
+          expect(oracledb.maxRows).to.equal(100000);
+        });
+      });
+
+      afterEach(function () {
+        return db.close();
+      });
+    });
+
     describe('options', function () {
       it('can pass options to query', function () {
-        var db = sworm.db(config);
+        var db = sworm.db(config());
         var person = db.model({table: 'people'});
 
         var bob = person({
