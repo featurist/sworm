@@ -186,12 +186,15 @@ Connection options:
 
       See: [https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback)
 
+      The driver will use connection pooling if you pass `pool: true`.
+
       ```js
       {
         user: 'username',
         password: 'password',
         host: 'localhost',
-        database: 'database name'
+        database: 'database name',
+        pool: true
       }
       ```
 
@@ -200,11 +203,14 @@ Connection options:
       See: [getConnection()](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection)
       For `options` see [Oracledb Properties](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#oracledbproperties)
 
+      The driver will use connection pooling if you pass `pool: true`.
+
       ```js
       {
         user: 'username',
         password: 'password',
         connectString: 'localhost/XE',
+        pool: true,
 
         options: {
           // options to set on `oracledb`
@@ -213,7 +219,7 @@ Connection options:
       }
       ```
 
-      The driver also supports oracledb connection pooling, pass the pool in the config:
+      The driver can also use an existing pool:
 
       ```js
       {
@@ -238,7 +244,7 @@ Connection options:
 
   * `url` a connection URL, the following are supported
     * `pg` - `postgres://user:password@host:5432/database`. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
-    * `oracle` - `oracle://user:password@host:1521/sid`
+    * `oracle` - `oracle://user:password@host:1521/sid&maxRows=100000&pool=true`
   * `setupSession` a function that is passed the `db` to setup the session before any queries are run.
 
     ```js
