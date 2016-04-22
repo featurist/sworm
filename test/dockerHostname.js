@@ -6,7 +6,7 @@ if (process.env.DOCKER_HOST) {
   module.exports = url.hostname;
 } else {
   if (/darwin/i.test(os.type())) {
-    module.exports = '192.168.64.2';
+    module.exports = 'docker.local';
   } else {
     module.exports = 'localhost';
   }

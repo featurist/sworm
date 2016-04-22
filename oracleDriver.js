@@ -1,8 +1,10 @@
 var optionalRequire = require('./optionalRequire');
 var promisify = require('./promisify');
 var debug = require('debug')('sworm:oracle');
+var swormDebug = require('debug')('sworm');
 var _ = require('underscore');
 var urlUtils = require('url');
+var redactConfig = require('./redactConfig');
 
 module.exports = function () {
   var oracledb = optionalRequire('oracledb');
@@ -37,9 +39,9 @@ module.exports = function () {
       });
     },
 
-    connect: function (_config) {
+    connect: function (swormConfig) {
       var self = this;
-      var config = _config.url? parseUrl(_config.url): _config.config;
+      var config = swormConfig.url? parseUrl(swormConfig.url): swormConfig.config;
 
       if (config.options) {
         Object.keys(config.options).forEach(function (key) {
@@ -49,7 +51,7 @@ module.exports = function () {
 
       function makeConnection() {
         if (config.pool === true) {
-          return self.connectionPool(config).then(pool => {
+          return connectionPool(oracledb, config, swormConfig).then(pool => {
             return promisify(cb => pool.getConnection(cb));
           });
         } else if (config.pool) {
@@ -62,22 +64,6 @@ module.exports = function () {
       return makeConnection().then(function (connection) {
         self.connection = connection;
       });
-    },
-
-    connectionPoolCache: {},
-
-    connectionPool: function(config) {
-      var key = JSON.stringify(config);
-
-      var value = this.connectionPoolCache[key];
-
-      if (!value) {
-        value = this.connectionPoolCache[key] = promisify(function (cb) {
-          oracledb.createPool(config, cb);
-        });
-      }
-
-      return value;
     },
 
     close: function () {
@@ -176,4 +162,23 @@ function parseUrl(url) {
     pool: pool,
     options: options
   };
+}
+
+var connectionPoolCache = {};
+
+module.exports.connectionPoolCache = connectionPoolCache;
+
+function connectionPool(oracledb, config, swormConfig) {
+  var key = JSON.stringify(config);
+
+  var value = connectionPoolCache[key];
+
+  if (!value) {
+    value = connectionPoolCache[key] = promisify(function (cb) {
+      swormDebug('creating connection pool', redactConfig(swormConfig));
+      oracledb.createPool(config, cb);
+    });
+  }
+
+  return value;
 }
