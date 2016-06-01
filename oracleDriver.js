@@ -72,6 +72,8 @@ module.exports = function () {
         return promisify(function (cb) {
           self.connection.release(cb);
         });
+      } else {
+        return Promise.resolve();
       }
     },
 
