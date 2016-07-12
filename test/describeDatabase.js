@@ -6,6 +6,8 @@ var chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 var _ = require("underscore");
 
+require('es6-promise').polyfill();
+
 module.exports = function(name, config, database, otherTests) {
   describe(name, function() {
     describe("missing modules", function() {
@@ -145,10 +147,10 @@ module.exports = function(name, config, database, otherTests) {
           return db.connect(function () {
             expect(db.connected).to.be.true;
 
-            return db.query('select * from people').then(people => {
+            return db.query('select * from people').then(function (people) {
               expect(people).to.eql([]);
             });
-          }).then(() => {
+          }).then(function () {
             expect(db.connected).to.be.false;
           });
         });

@@ -51,13 +51,13 @@ module.exports = function () {
 
       function makeConnection() {
         if (config.pool === true) {
-          return connectionPool(oracledb, config, swormConfig).then(pool => {
-            return promisify(cb => pool.getConnection(cb));
+          return connectionPool(oracledb, config, swormConfig).then(function (pool) {
+            return promisify(function (cb) { pool.getConnection(cb); });
           });
         } else if (config.pool) {
-          return promisify(cb => config.pool.getConnection(cb));
+          return promisify(function (cb) { config.pool.getConnection(cb); });
         } else {
-          return promisify(cb => oracledb.getConnection(config, cb));
+          return promisify(function (cb) { oracledb.getConnection(config, cb); });
         }
       }
 
@@ -143,7 +143,7 @@ function parseValue(value) {
 function parseOptions(options) {
   var result = {};
 
-  Object.keys(options).forEach(key => {
+  Object.keys(options).forEach(function (key) {
     result[key] = parseValue(options[key]);
   });
 
