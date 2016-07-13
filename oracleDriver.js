@@ -43,6 +43,8 @@ module.exports = function () {
       var self = this;
       var config = swormConfig.url? parseUrl(swormConfig.url): swormConfig.config;
 
+      oracledb.autoCommit = true;
+
       if (config.options) {
         Object.keys(config.options).forEach(function (key) {
           oracledb[key] = config.options[key];
