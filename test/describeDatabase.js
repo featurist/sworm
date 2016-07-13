@@ -112,8 +112,26 @@ module.exports = function(name, config, database, otherTests) {
               return expect(database.clean(people)).to.eql([{
                 id: p.id,
                 name: "bob",
-                address_id: null
+                address_id: null,
+                photo: null
               }]);
+            });
+          });
+        });
+
+        describe('binary', function () {
+          it('can store binary', function () {
+            var photo = new Buffer('♥︎');
+
+            var bob = person({
+              name: 'bob',
+              photo: photo
+            });
+
+            return bob.save().then(function () {
+              return db.query('select * from people').then(function (people) {
+                expect(people[0].photo.toString()).to.equal(photo.toString());
+              });
             });
           });
         });
@@ -133,7 +151,8 @@ module.exports = function(name, config, database, otherTests) {
               return expect(database.clean(people)).to.eql([{
                 id: p.id,
                 name: "bob",
-                address_id: null
+                address_id: null,
+                photo: null
               }]);
             });
           });
@@ -204,7 +223,8 @@ module.exports = function(name, config, database, otherTests) {
                 expect(database.clean(people)).to.eql([{
                   id: p.id,
                   name: "bob's name is 'matilda'",
-                  address_id: null
+                  address_id: null,
+                  photo: null
                 }]);
               });
             });
@@ -294,7 +314,8 @@ module.exports = function(name, config, database, otherTests) {
                 expect(database.clean(people)).to.eql([{
                     id: p.id,
                     name: "jane",
-                    address_id: null
+                    address_id: null,
+                    photo: null
                 }]);
               });
             });
@@ -671,7 +692,8 @@ module.exports = function(name, config, database, otherTests) {
                 expect(database.clean(people)).to.eql([{
                   id: bob.id,
                   name: 'bob',
-                  address_id: null
+                  address_id: null,
+                  photo: null
                 }]);
               });
             });

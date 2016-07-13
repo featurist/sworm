@@ -62,7 +62,7 @@ var database = {
     }
 
     return createTable("people",
-      'create table if not exists people (id serial NOT NULL, name varchar(50) NOT NULL, address_id int NULL)'
+      'create table if not exists people (id serial NOT NULL, name varchar(50) NOT NULL, address_id int NULL, photo bytea null)'
     ).then(function () {
       return createTable("people_addresses",
         'create table if not exists people_addresses(address_id int NOT NULL, person_id int NOT NULL, rating int NULL)'

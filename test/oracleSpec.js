@@ -51,7 +51,7 @@ if (!process.env.TRAVIS) {
       }
 
       return createTable("people", "id",
-        'create table people (id number primary key, name varchar2(50) NOT NULL, address_id number NULL)'
+        'create table people (id number primary key, name varchar2(50) NOT NULL, address_id number NULL, photo raw(10) null)'
       ).then(function() {
         return createTable("people_addresses", "address_id",
           'create table people_addresses(address_id int NOT NULL, person_id int NOT NULL, rating int NULL)',
@@ -191,7 +191,8 @@ if (!process.env.TRAVIS) {
             expect(rows.metaData).to.eql([
               {name: 'ID'},
               {name: 'NAME'},
-              {name: 'ADDRESS_ID'}
+              {name: 'ADDRESS_ID'},
+              {name: 'PHOTO'}
             ]);
           });
         });

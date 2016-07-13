@@ -13,7 +13,7 @@ var rowBase = function() {
   function fieldsForObject(obj) {
     return Object.keys(obj).filter(function (key) {
       var value = obj[key];
-      return value instanceof Date || value !== null && value !== undefined && !(value instanceof Object);
+      return value instanceof Date || value instanceof Buffer || value !== null && value !== undefined && !(value instanceof Object);
     });
   }
 
@@ -23,7 +23,7 @@ var rowBase = function() {
         return false;
       } else {
         var value = obj[key];
-        return !(value instanceof Date) && value instanceof Object;
+        return !(value instanceof Date) && !(value instanceof Buffer) && value instanceof Object;
       }
     });
   }
