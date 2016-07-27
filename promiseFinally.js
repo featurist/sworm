@@ -1,6 +1,6 @@
 module.exports = function(value, cb) {
   return value.then(
-    value => Promise.resolve(cb()).then(() => value),
-    reason => Promise.resolve(cb()).then(() => Promise.reject(reason))
+    function (value) { return Promise.resolve(cb()).then(function () { return value; }); },
+    function (reason) { return Promise.resolve(cb()).then(function() { return Promise.reject(reason); }); }
   )
 }

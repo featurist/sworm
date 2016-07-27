@@ -18,9 +18,9 @@ module.exports = function() {
   return {
     queries: 0,
 
-    execute(p) {
+    execute: function(p) {
       this.queries++;
-      return promiseFinally(p, () => {
+      return promiseFinally(p, function () {
         this.queries--;
         if (this.queries === 0 && this._whenFinished) {
           this._whenFinished();
@@ -28,8 +28,8 @@ module.exports = function() {
       });
     },
 
-    whenNotExecuting(wf) {
-      return new Promise(resolve => {
+    whenNotExecuting: function(wf) {
+      return new Promise(function (resolve) {
         if (this.queries == 0) {
           resolve(wf());
         } else {
