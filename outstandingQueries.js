@@ -19,21 +19,27 @@ module.exports = function() {
     queries: 0,
 
     execute: function(p) {
+      var self = this;
+
       this.queries++;
+      console.log('started query', this.queries);
       return promiseFinally(p, function () {
-        this.queries--;
-        if (this.queries === 0 && this._whenFinished) {
-          this._whenFinished();
+        self.queries--;
+        console.log('finished query', self.queries);
+        if (self.queries === 0 && self._whenFinished) {
+          self._whenFinished();
         }
       });
     },
 
     whenNotExecuting: function(wf) {
+      var self = this;
+
       return new Promise(function (resolve) {
-        if (this.queries == 0) {
+        if (self.queries == 0) {
           resolve(wf());
         } else {
-          this._whenFinished = function() {
+          self._whenFinished = function() {
             resolve(wf());
           };
         }
