@@ -320,7 +320,7 @@ Any other properties or functions on the `options` object are accessible by enti
 var address = db.model({
   table: 'addresses',
 
-  function: addPerson(person) {
+  addPerson: function(person) {
     this.people = this.people || [];
     person.address = this;
     this.people.push(person);
