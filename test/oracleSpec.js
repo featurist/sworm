@@ -8,6 +8,10 @@ if (!process.env.TRAVIS) {
   var _ = require('underscore');
   var addUrlParams = require('./addUrlParams');
 
+  function wait(n) {
+    return new Promise(function (resolve) { setTimeout(resolve, n); });
+  }
+
   var database = {
     createTables: function(db, tables) {
       function createTable(name, id, sql, noAutoId) {
@@ -101,6 +105,21 @@ if (!process.env.TRAVIS) {
   }
 
   describeDatabase("oracle", config(), database, function () {
+    describe('only close after all queries have finished', function () {
+      it("doesn't throw NJS-032: Connection cannot be released because a database call is in progress when closing", function () {
+        var db = sworm.db(config({pool: true, asdf: true}));
+
+        return Promise.all([
+          wait(0).then(function () { return db.query("insert into people (name) values ('Bob')"); }),
+          db.query('select name as asldkfjasdlfkjasldfkjasldfkjasldfkjasldfkj from people'),
+        ]).then(function () {
+          return db.close();
+        }, function () {
+          return db.close();
+        });
+      });
+    });
+
     describe('connection pooling', function () {
       var db;
       var db1;

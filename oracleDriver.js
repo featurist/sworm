@@ -5,12 +5,15 @@ var swormDebug = require('debug')('sworm');
 var _ = require('underscore');
 var urlUtils = require('url');
 var redactConfig = require('./redactConfig');
+var outstandingQueries = require('./outstandingQueries');
 
 module.exports = function () {
   var oracledb = optionalRequire('oracledb');
 
 
   return {
+    outstandingQueries: outstandingQueries(),
+
     query: function (query, params, options) {
       var results = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options));
 
@@ -26,9 +29,9 @@ module.exports = function () {
     execute: function (query, params, options) {
       var self = this;
       debug(query, params);
-      return promisify(function (cb) {
+      return this.outstandingQueries.execute(promisify(function (cb) {
         self.connection.execute(query, params || {}, options, cb)
-      });
+      }));
     },
 
     insert: function(query, params, options) {
@@ -71,8 +74,10 @@ module.exports = function () {
     close: function () {
       var self = this;
       if (self.connection) {
-        return promisify(function (cb) {
-          self.connection.release(cb);
+        return this.outstandingQueries.whenNotExecuting(function () {
+          return promisify(function (cb) {
+            self.connection.release(cb);
+          });
         });
       } else {
         return Promise.resolve();
