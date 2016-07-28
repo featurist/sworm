@@ -22,10 +22,8 @@ module.exports = function() {
       var self = this;
 
       this.queries++;
-      console.log('started query', this.queries);
       return promiseFinally(p, function () {
         self.queries--;
-        console.log('finished query', self.queries);
         if (self.queries === 0 && self._whenFinished) {
           self._whenFinished();
         }
