@@ -73,6 +73,11 @@ if (!process.env.TRAVIS) {
         return createTable("people_explicit_id", "id",
           'create table people_explicit_id(id int NOT NULL, name varchar2(50) NOT NULL)'
         );
+      }).then(function() {
+        return createTable("with_string_id", "id",
+          'create table with_string_id(id varchar(10) primary key, name varchar2(50) NOT NULL)',
+          true
+        );
       });
     },
 
@@ -196,25 +201,55 @@ if (!process.env.TRAVIS) {
       });
     });
 
+    describe('adding rows with varchar ids', function () {
+      var db;
+
+      beforeEach(function () {
+        db = sworm.db(config());
+      });
+
+      it('can add a row with a varchar id', function () {
+      });
+    });
+
     describe('options', function () {
-      it('can pass options to query', function () {
-        var db = sworm.db(config());
-        var person = db.model({table: 'people'});
+      var db;
 
-        var bob = person({
-          name: 'bob'
-        });
+      beforeEach(function () {
+        db = sworm.db(config());
+      });
 
-        return bob.save().then(function () {
-          return db.query('select * from people', {}, {formatRows: false, outFormat: oracledb.OBJECT}).then(function (rows) {
-            expect(rows.metaData).to.eql([
-              {name: 'ID'},
-              {name: 'NAME'},
-              {name: 'ADDRESS_ID'},
-              {name: 'PHOTO'}
-            ]);
+      it('can add a row with a varchar id', function () {
+        var blah = db.model({table: 'with_string_id', idType: oracledb.STRING});
+
+        var b = blah({name: 'asdf', id: 'string'});
+        return b.save();
+      });
+
+      describe('options', function () {
+        it('can pass options to query', function () {
+          var db = sworm.db(config());
+          var person = db.model({table: 'people'});
+
+          var bob = person({
+            name: 'bob'
+          });
+
+          return bob.save().then(function () {
+            return db.query('select * from people', {}, {formatRows: false, outFormat: oracledb.OBJECT}).then(function (rows) {
+              expect(rows.metaData).to.eql([
+                {name: 'ID'},
+                {name: 'NAME'},
+                {name: 'ADDRESS_ID'},
+                {name: 'PHOTO'}
+              ]);
+            });
           });
         });
+      });
+
+      afterEach(function () {
+        return db.close();
       });
     });
   });

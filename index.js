@@ -290,11 +290,13 @@ exports.db = function(config) {
     model: function(modelConfig) {
       var foreignKeyFor = option(modelConfig, 'foreignKeyFor');
       var id = option(modelConfig, 'id', 'id');
+      var idType = option(modelConfig, 'idType');
       var table = option(modelConfig, 'table');
 
       modelConfig._meta = {
         table: table,
         id: id,
+        idType: idType,
         db: this,
         foreignKeyFor: foreignKeyFor,
         compoundKey: id == false || id instanceof Array
