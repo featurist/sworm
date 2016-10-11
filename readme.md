@@ -302,6 +302,7 @@ var createEntity = db.model(options);
 
   * `table` (`undefined`) the name of the table to save entities to
   * `id` (`'id'`) the name of the identity column. This can be an array of id columns for compound keys, or `false` if there is no id column.
+  * `idType` (`oracledb.NUMBER`) for `oracledb` the type of the identity column, for e.g. `oracledb.STRING`.
   * `foreignKeyFor` a function that returns a foreign key field name for a member (see [Relationships](#relationships)), defaults to:
 
     ```js
