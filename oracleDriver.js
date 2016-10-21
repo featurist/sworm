@@ -37,7 +37,7 @@ module.exports = function () {
     insert: function(query, params, options) {
       var id = options.id;
 
-      return this.query(query + " returning " + id + " into :returning_into_id", params, options).then(function (rows) {
+      return this.query(query + ' returning ' + id + ' into :returning_into_id', params, options).then(function (rows) {
         return rows.outBinds.returning_into_id[0];
       });
     },

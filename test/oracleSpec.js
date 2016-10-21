@@ -201,17 +201,6 @@ if (!process.env.TRAVIS) {
       });
     });
 
-    describe('adding rows with varchar ids', function () {
-      var db;
-
-      beforeEach(function () {
-        db = sworm.db(config());
-      });
-
-      it('can add a row with a varchar id', function () {
-      });
-    });
-
     describe('options', function () {
       var db;
 
