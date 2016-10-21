@@ -779,15 +779,15 @@ module.exports = function(name, config, database, otherTests) {
             var jane;
             var rueDEssert = address({
               address: "15, Rue d'Essert",
-              people: function() {
+              people: function(address) {
                 return [
                   bob = person({
                     name: "bob",
-                    address: this
+                    address: address
                   }),
                   jane = person({
                     name: "jane",
-                    address: this
+                    address: address
                   })
                 ];
               }
@@ -827,15 +827,15 @@ module.exports = function(name, config, database, otherTests) {
           it("one to many relationships with functions aren't saved twice", function() {
             var rueDEssert = address({
               address: "15, Rue d'Essert",
-              people: function() {
+              people: function(address) {
                 return [
                   person({
                     name: "bob",
-                    address: this
+                    address: address
                   }),
                   person({
                     name: "jane",
-                    address: this
+                    address: address
                   })
                 ];
               }

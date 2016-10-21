@@ -450,10 +450,10 @@ var address = db.model({ table: 'addresses' });
 
 var essert = address({
   address: "15 Rue d'Essert",
-  people: function() {
+  people: function(addr) {
     return [
-      person({ name: 'bob', address: this }),
-      person({ name: 'jane', address: this })
+      person({ name: 'bob', address: addr }),
+      person({ name: 'jane', address: addr })
     ];
   }
 });

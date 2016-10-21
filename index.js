@@ -110,7 +110,7 @@ var rowBase = function() {
   function foreignField(obj, field) {
     var v = obj[field];
     if (typeof v == 'function') {
-      var value = obj[field]();
+      var value = obj[field](obj);
       obj[field] = value;
       return value;
     } else {
