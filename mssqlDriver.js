@@ -37,16 +37,20 @@ module.exports = function() {
     },
 
     commit: function() {
+      var self = this;
+
       debug('commit');
-      return this.transaction.commit().then(() => {
-        this.transaction = undefined;
+      return this.transaction.commit().then(function() {
+        self.transaction = undefined;
       });
     },
 
     rollback: function() {
+      var self = this;
+
       debug('rollback');
-      return this.transaction.rollback().then(() => {
-        this.transaction = undefined;
+      return this.transaction.rollback().then(function() {
+        self.transaction = undefined;
       });
     },
 

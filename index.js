@@ -453,17 +453,19 @@ exports.db = function(config) {
     },
 
     transaction: function (options, fn) {
+      var self = this;
+
       if (typeof options === 'function') {
         fn = options;
         options = undefined;
       }
 
-      return this.begin(options).then(() => {
+      return this.begin(options).then(function() {
         return fn();
-      }).then(r => {
-        return this.commit().then(() => r);
-      }, e => {
-        return this.rollback().then(() => { throw e; });
+      }).then(function(r) {
+        return self.commit().then(function() { return r; });
+      }, function(e) {
+        return self.rollback().then(function() { throw e; });
       });
     },
 

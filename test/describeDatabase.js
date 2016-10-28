@@ -211,9 +211,9 @@ module.exports = function(name, config, database, otherTests) {
               it('rolls back when rollback is called', function () {
                 return db.begin().then(function () {
                   var bob = person({ name: 'bob' });
-                  return bob.save().then(() => {
+                  return bob.save().then(function () {
                     return db.query('select * from people');
-                  }).then(people => {
+                  }).then(function (people) {
                     expect(people).to.eql([
                       {
                         id: bob.id,
@@ -222,11 +222,11 @@ module.exports = function(name, config, database, otherTests) {
                         photo: null
                       }
                     ]);
-                  }).then(() => {
+                  }).then(function() {
                     return db.rollback();
-                  }).then(() => {
+                  }).then(function() {
                     return db.query('select * from people');
-                  }).then(people => {
+                  }).then(function(people) {
                     expect(people).to.eql([
                     ]);
                   });
@@ -238,9 +238,9 @@ module.exports = function(name, config, database, otherTests) {
               it('rolls back if the transaction scope throws an exception', function () {
                 return expect(db.transaction(function () {
                   var bob = person({ name: 'bob' });
-                  return bob.save().then(() => {
+                  return bob.save().then(function() {
                     return db.query('select * from people');
-                  }).then(people => {
+                  }).then(function(people) {
                     expect(people).to.eql([
                       {
                         id: bob.id,
@@ -252,9 +252,9 @@ module.exports = function(name, config, database, otherTests) {
 
                     throw new Error('uh oh');
                   });
-                })).to.be.rejectedWith('uh oh').then(() => {
+                })).to.be.rejectedWith('uh oh').then(function() {
                   return db.query('select * from people');
-                }).then(people => {
+                }).then(function(people) {
                   expect(people).to.eql([
                   ]);
                 });
@@ -267,9 +267,9 @@ module.exports = function(name, config, database, otherTests) {
               it('makes changes after commit is called', function () {
                 return db.begin().then(function () {
                   var bob = person({ name: 'bob' });
-                  return bob.save().then(() => {
+                  return bob.save().then(function() {
                     return db.query('select * from people');
-                  }).then(people => {
+                  }).then(function(people) {
                     expect(people).to.eql([
                       {
                         id: bob.id,
@@ -278,11 +278,11 @@ module.exports = function(name, config, database, otherTests) {
                         photo: null
                       }
                     ]);
-                  }).then(() => {
+                  }).then(function() {
                     return db.commit();
-                  }).then(() => {
+                  }).then(function() {
                     return db.query('select * from people');
-                  }).then(people => {
+                  }).then(function(people) {
                     expect(people).to.eql([
                       {
                         id: bob.id,
@@ -302,9 +302,9 @@ module.exports = function(name, config, database, otherTests) {
 
                 return db.transaction(function () {
                   bob = person({ name: 'bob' });
-                  return bob.save().then(() => {
+                  return bob.save().then(function() {
                     return db.query('select * from people');
-                  }).then(people => {
+                  }).then(function(people) {
                     expect(people).to.eql([
                       {
                         id: bob.id,
@@ -314,9 +314,9 @@ module.exports = function(name, config, database, otherTests) {
                       }
                     ]);
                   });
-                }).then(() => {
+                }).then(function() {
                   return db.query('select * from people');
-                }).then(people => {
+                }).then(function(people) {
                   expect(people).to.eql([
                     {
                       id: bob.id,
