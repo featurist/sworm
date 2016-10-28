@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "debug": "2.2.0",
+    "randomstring": "1.1.5",
     "underscore": "1.8.3"
   },
   "devDependencies": {
@@ -17,9 +18,9 @@
     "fs-promise": "0.5.0",
     "mocha": "2.5.3",
     "mssql": "3.3.0",
-    "mysql": "2.10.2",
-    "pg": "4.5.5",
-    "sqlite3": "3.1.4"
+    "mysql": "2.11.1",
+    "pg": "6.1.0",
+    "sqlite3": "3.1.8"
   },
   "scripts": {
     "test": "mocha"

@@ -88,6 +88,10 @@ if (!process.env.TRAVIS) {
       return records;
     },
 
+    setAutoCommit: function(value) {
+      oracledb.autoCommit = value;
+    },
+
     driverModuleName: "oracledb"
   };
 

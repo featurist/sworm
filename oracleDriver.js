@@ -6,6 +6,7 @@ var _ = require('underscore');
 var urlUtils = require('url');
 var redactConfig = require('./redactConfig');
 var outstandingQueries = require('./outstandingQueries');
+var randomstring = require('randomstring');
 
 module.exports = function () {
   var oracledb = optionalRequire('oracledb');
@@ -40,6 +41,15 @@ module.exports = function () {
       return this.query(query + ' returning ' + id + ' into :returning_into_id', params, options).then(function (rows) {
         return rows.outBinds.returning_into_id[0];
       });
+    },
+
+    generateTransactionName: function() {
+      return 't' + randomstring.generate();
+    },
+
+    begin: function(options) {
+      var transactionName = options && options.name || this.generateTransactionName();
+      return this.query("set transaction name '" + transactionName + "'", undefined, {statement: true});
     },
 
     connect: function (swormConfig) {

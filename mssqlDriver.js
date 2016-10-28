@@ -7,7 +7,7 @@ module.exports = function() {
 
   return {
     query: function(query, params) {
-      var request = new sql.Request(this.connection);
+      var request = new sql.Request(this.transaction || this.connection);
 
       if (params) {
         Object.keys(params).forEach(function (key) {
@@ -27,6 +27,30 @@ module.exports = function() {
 
       return promisify(function(cb) {
         return self.connection.connect(cb);
+      });
+    },
+
+    begin: function() {
+      this.transaction = this.connection.transaction();
+      debug('begin transaction');
+      return this.transaction.begin();
+    },
+
+    commit: function() {
+      var self = this;
+
+      debug('commit');
+      return this.transaction.commit().then(function() {
+        self.transaction = undefined;
+      });
+    },
+
+    rollback: function() {
+      var self = this;
+
+      debug('rollback');
+      return this.transaction.rollback().then(function() {
+        self.transaction = undefined;
       });
     },
 

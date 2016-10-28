@@ -343,6 +343,11 @@ exports.db = function(config) {
       });
     },
 
+    statement: function(query, params, options) {
+      options = _.extend({statement: true}, options);
+      return this.query(query, params, options);
+    },
+
     whenConnected: function(fn) {
       if (this.runningBeginSession) {
         return fn();
@@ -444,6 +449,47 @@ exports.db = function(config) {
             throw error;
           });
         });
+      }
+    },
+
+    transaction: function (options, fn) {
+      var self = this;
+
+      if (typeof options === 'function') {
+        fn = options;
+        options = undefined;
+      }
+
+      return this.begin(options).then(function() {
+        return fn();
+      }).then(function(r) {
+        return self.commit().then(function() { return r; });
+      }, function(e) {
+        return self.rollback().then(function() { throw e; });
+      });
+    },
+
+    begin: function (options) {
+      if (this.driver.begin) {
+        return this.driver.begin(options);
+      } else {
+        return this.statement('begin' + (options? ' ' + options: ''));
+      }
+    },
+
+    commit: function () {
+      if (this.driver.commit) {
+        return this.driver.commit();
+      } else {
+        return this.statement('commit');
+      }
+    },
+
+    rollback: function () {
+      if (this.driver.rollback) {
+        return this.driver.rollback();
+      } else {
+        return this.statement('rollback');
       }
     },
 
