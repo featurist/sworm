@@ -13,7 +13,13 @@ var rowBase = function() {
   function fieldsForObject(obj) {
     return Object.keys(obj).filter(function (key) {
       var value = obj[key];
-      return value instanceof Date || value !== null && value !== undefined && !(value instanceof Object);
+      return value instanceof Date
+        || value instanceof Buffer
+        || !(
+          value === null
+          || value === undefined
+          || value instanceof Object
+        );
     });
   }
 
@@ -23,7 +29,7 @@ var rowBase = function() {
         return false;
       } else {
         var value = obj[key];
-        return !(value instanceof Date) && value instanceof Object;
+        return !(value instanceof Date) && !(value instanceof Buffer) && value instanceof Object;
       }
     });
   }
@@ -104,7 +110,7 @@ var rowBase = function() {
   function foreignField(obj, field) {
     var v = obj[field];
     if (typeof v == 'function') {
-      var value = obj[field]();
+      var value = obj[field](obj);
       obj[field] = value;
       return value;
     } else {
@@ -271,15 +277,8 @@ var rowBase = function() {
   };
 }();
 
-function option(obj, property, value) {
-  var opt;
-  if (obj.hasOwnProperty(property)) {
-    opt = obj[property];
-    delete obj[property];
-    return opt;
-  } else {
-    return value;
-  }
+function isModelMeta(value, key) {
+  return typeof value !== 'function' || key === 'foreignKeyFor'; 
 }
 
 exports.db = function(config) {
@@ -288,19 +287,16 @@ exports.db = function(config) {
     config: config,
 
     model: function(modelConfig) {
-      var foreignKeyFor = option(modelConfig, 'foreignKeyFor');
-      var id = option(modelConfig, 'id', 'id');
-      var table = option(modelConfig, 'table');
+      var proto = _.omit(modelConfig, isModelMeta);
+      proto._meta = _.extend({
+        id: 'id'
+      }, _.pick(modelConfig, isModelMeta));
 
-      modelConfig._meta = {
-        table: table,
-        id: id,
-        db: this,
-        foreignKeyFor: foreignKeyFor,
-        compoundKey: id == false || id instanceof Array
-      };
+      proto._meta.db = this;
+      var id = proto._meta.id;
+      proto._meta.compoundKey = id == false || id instanceof Array;
 
-      var modelPrototype = _.extend(Object.create(rowBase), modelConfig);
+      var modelPrototype = _.extend(Object.create(rowBase), proto);
 
       function model(obj, options) {
         var saved = typeof options == 'object' && options.hasOwnProperty('saved')? options.saved: false;

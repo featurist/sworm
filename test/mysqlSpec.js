@@ -24,40 +24,22 @@ var database = {
     }
 
     return createTable("people",
-      `create table if not exists people (
-         id serial NOT NULL,
-         name varchar(50) NOT NULL,
-         address_id int NULL
-       )`
+      'create table if not exists people (id serial NOT NULL, name varchar(50) NOT NULL, address_id int NULL, photo varbinary(10) null)'
     ).then(function() {
       return createTable("people_addresses",
-        `create table if not exists people_addresses(
-           address_id int NOT NULL,
-           person_id int NOT NULL,
-           rating int NULL
-         )`
+        'create table if not exists people_addresses(address_id int NOT NULL, person_id int NOT NULL, rating int NULL)'
       );
     }).then(function() {
       return createTable("addresses",
-        `create table if not exists addresses(
-           id serial NOT NULL,
-           address varchar(50) NOT NULL
-         )`
+        'create table if not exists addresses(id serial NOT NULL, address varchar(50) NOT NULL)'
       );
     }).then(function() {
       return createTable("people_weird_id",
-        `create table if not exists people_weird_id(
-           weird_id serial NOT NULL,
-           name varchar(50) NULL,
-           address_weird_id int NULL
-         )`
+        'create table if not exists people_weird_id(weird_id serial NOT NULL, name varchar(50) NULL, address_weird_id int NULL)'
       );
     }).then(function() {
       return createTable("people_explicit_id",
-        `create table if not exists people_explicit_id(
-           id int NOT NULL,
-           name varchar(50) NOT NULL
-         )`
+        'create table if not exists people_explicit_id(id int NOT NULL, name varchar(50) NOT NULL)'
       );
     });
   },

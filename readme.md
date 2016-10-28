@@ -186,12 +186,15 @@ Connection options:
 
       See: [https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback)
 
+      The driver will use connection pooling if you pass `pool: true`.
+
       ```js
       {
         user: 'username',
         password: 'password',
         host: 'localhost',
-        database: 'database name'
+        database: 'database name',
+        pool: true
       }
       ```
 
@@ -200,11 +203,16 @@ Connection options:
       See: [getConnection()](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection)
       For `options` see [Oracledb Properties](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#oracledbproperties)
 
+      The driver will use connection pooling if you pass `pool: true`.
+
+      By default the driver is set to `autoCommit = true`, you can pass `options: { autoCommit: false}` to turn this off again.
+
       ```js
       {
         user: 'username',
         password: 'password',
         connectString: 'localhost/XE',
+        pool: true,
 
         options: {
           // options to set on `oracledb`
@@ -213,7 +221,7 @@ Connection options:
       }
       ```
 
-      The driver also supports oracledb connection pooling, pass the pool in the config:
+      The driver can also use an existing pool:
 
       ```js
       {
@@ -236,7 +244,9 @@ Connection options:
       }
       ```
 
-  * `url` a connection URL passed to the postgres driver. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+  * `url` a connection URL, the following are supported
+    * `pg` - `postgres://user:password@host:5432/database`. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+    * `oracle` - `oracle://user:password@host:1521/sid&maxRows=100000&pool=true`
   * `setupSession` a function that is passed the `db` to setup the session before any queries are run.
 
     ```js
@@ -294,6 +304,7 @@ var createEntity = db.model(options);
 
   * `table` (`undefined`) the name of the table to save entities to
   * `id` (`'id'`) the name of the identity column. This can be an array of id columns for compound keys, or `false` if there is no id column.
+  * `idType` (`oracledb.NUMBER`) for `oracledb` the type of the identity column, for e.g. `oracledb.STRING`.
   * `foreignKeyFor` a function that returns a foreign key field name for a member (see [Relationships](#relationships)), defaults to:
 
     ```js
@@ -312,7 +323,7 @@ Any other properties or functions on the `options` object are accessible by enti
 var address = db.model({
   table: 'addresses',
 
-  function: addPerson(person) {
+  addPerson: function(person) {
     this.people = this.people || [];
     person.address = this;
     this.people.push(person);
@@ -441,10 +452,10 @@ var address = db.model({ table: 'addresses' });
 
 var essert = address({
   address: "15 Rue d'Essert",
-  people: function() {
+  people: function(addr) {
     return [
-      person({ name: 'bob', address: this }),
-      person({ name: 'jane', address: this })
+      person({ name: 'bob', address: addr }),
+      person({ name: 'jane', address: addr })
     ];
   }
 });

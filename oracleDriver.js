@@ -1,12 +1,19 @@
 var optionalRequire = require('./optionalRequire');
 var promisify = require('./promisify');
 var debug = require('debug')('sworm:oracle');
+var swormDebug = require('debug')('sworm');
 var _ = require('underscore');
+var urlUtils = require('url');
+var redactConfig = require('./redactConfig');
+var outstandingQueries = require('./outstandingQueries');
 
 module.exports = function () {
   var oracledb = optionalRequire('oracledb');
 
+
   return {
+    outstandingQueries: outstandingQueries(),
+
     query: function (query, params, options) {
       var results = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options));
 
@@ -22,44 +29,59 @@ module.exports = function () {
     execute: function (query, params, options) {
       var self = this;
       debug(query, params);
-      return promisify(function (cb) {
+      return this.outstandingQueries.execute(promisify(function (cb) {
         self.connection.execute(query, params || {}, options, cb)
-      });
+      }));
     },
 
     insert: function(query, params, options) {
       var id = options.id;
 
-      return this.query(query + " returning " + id + " into :returning_into_id", params, options).then(function (rows) {
+      return this.query(query + ' returning ' + id + ' into :returning_into_id', params, options).then(function (rows) {
         return rows.outBinds.returning_into_id[0];
       });
     },
 
-    connect: function (config) {
+    connect: function (swormConfig) {
       var self = this;
+      var config = swormConfig.url? parseUrl(swormConfig.url): swormConfig.config;
 
-      if (config.config.options) {
-        Object.keys(config.config.options).forEach(function (key) {
-          oracledb[key] = config.config.options[key];
+      oracledb.autoCommit = true;
+
+      if (config.options) {
+        Object.keys(config.options).forEach(function (key) {
+          oracledb[key] = config.options[key];
         });
       }
 
-      return promisify(function (cb) {
-        if (config.config.pool) {
-          config.config.pool.getConnection(cb);
+      function makeConnection() {
+        if (config.pool === true) {
+          return connectionPool(oracledb, config, swormConfig).then(function (pool) {
+            return promisify(function (cb) { pool.getConnection(cb); });
+          });
+        } else if (config.pool) {
+          return promisify(function (cb) { config.pool.getConnection(cb); });
         } else {
-          oracledb.getConnection(config.config, cb);
+          return promisify(function (cb) { oracledb.getConnection(config, cb); });
         }
-      }).then(function (connection) {
+      }
+
+      return makeConnection().then(function (connection) {
         self.connection = connection;
       });
     },
 
     close: function () {
       var self = this;
-      return promisify(function (cb) {
-        self.connection.release(cb);
-      });
+      if (self.connection) {
+        return this.outstandingQueries.whenNotExecuting(function () {
+          return promisify(function (cb) {
+            self.connection.release(cb);
+          });
+        });
+      } else {
+        return Promise.resolve();
+      }
     },
 
     insertEmpty: function(table, id) {
@@ -110,4 +132,64 @@ function replaceParameters(query) {
   return query.replace(/@([a-z_0-9]+)\b/gi, function (_, paramName) {
     return ':' + paramName;
   });
+}
+
+function parseValue(value) {
+  var number = Number(value);
+  if (!isNaN(number)) {
+    return number;
+  }
+  
+  if (value == 'true' || value == 'false') {
+    return value == 'true';
+  }
+
+  return value;
+}
+
+function parseOptions(options) {
+  var result = {};
+
+  Object.keys(options).forEach(function (key) {
+    result[key] = parseValue(options[key]);
+  });
+
+  return result;
+}
+
+function parseUrl(url) {
+  var u = urlUtils.parse(url, true);
+  var auth = u.auth? u.auth.split(':'): [];
+
+  var options = parseOptions(u.query);
+
+  var pool = options.pool;
+  delete options.pool;
+
+  return {
+    user: auth[0],
+    password: auth[1],
+    connectString: u.host + u.pathname,
+    pool: pool,
+    options: options
+  };
+}
+
+var connectionPoolCache = {};
+
+module.exports.connectionPoolCache = connectionPoolCache;
+
+function connectionPool(oracledb, config, swormConfig) {
+  var key = JSON.stringify(config);
+
+  var value = connectionPoolCache[key];
+
+  if (!value) {
+    value = connectionPoolCache[key] = promisify(function (cb) {
+      swormDebug('creating connection pool', redactConfig(swormConfig));
+      oracledb.createPool(config, cb);
+    });
+  }
+
+  return value;
 }

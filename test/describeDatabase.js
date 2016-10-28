@@ -6,6 +6,8 @@ var chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 var _ = require("underscore");
 
+require('es6-promise').polyfill();
+
 module.exports = function(name, config, database, otherTests) {
   describe(name, function() {
     describe("missing modules", function() {
@@ -110,8 +112,26 @@ module.exports = function(name, config, database, otherTests) {
               return expect(database.clean(people)).to.eql([{
                 id: p.id,
                 name: "bob",
-                address_id: null
+                address_id: null,
+                photo: null
               }]);
+            });
+          });
+        });
+
+        describe('binary', function () {
+          it('can store binary', function () {
+            var photo = new Buffer('♥︎');
+
+            var bob = person({
+              name: 'bob',
+              photo: photo
+            });
+
+            return bob.save().then(function () {
+              return db.query('select * from people').then(function (people) {
+                expect(people[0].photo.toString()).to.equal(photo.toString());
+              });
             });
           });
         });
@@ -131,7 +151,8 @@ module.exports = function(name, config, database, otherTests) {
               return expect(database.clean(people)).to.eql([{
                 id: p.id,
                 name: "bob",
-                address_id: null
+                address_id: null,
+                photo: null
               }]);
             });
           });
@@ -145,10 +166,10 @@ module.exports = function(name, config, database, otherTests) {
           return db.connect(function () {
             expect(db.connected).to.be.true;
 
-            return db.query('select * from people').then(people => {
+            return db.query('select * from people').then(function (people) {
               expect(people).to.eql([]);
             });
-          }).then(() => {
+          }).then(function () {
             expect(db.connected).to.be.false;
           });
         });
@@ -322,7 +343,8 @@ module.exports = function(name, config, database, otherTests) {
                 expect(database.clean(people)).to.eql([{
                   id: p.id,
                   name: "bob's name is 'matilda'",
-                  address_id: null
+                  address_id: null,
+                  photo: null
                 }]);
               });
             });
@@ -412,7 +434,8 @@ module.exports = function(name, config, database, otherTests) {
                 expect(database.clean(people)).to.eql([{
                     id: p.id,
                     name: "jane",
-                    address_id: null
+                    address_id: null,
+                    photo: null
                 }]);
               });
             });
@@ -789,7 +812,8 @@ module.exports = function(name, config, database, otherTests) {
                 expect(database.clean(people)).to.eql([{
                   id: bob.id,
                   name: 'bob',
-                  address_id: null
+                  address_id: null,
+                  photo: null
                 }]);
               });
             });
@@ -875,15 +899,15 @@ module.exports = function(name, config, database, otherTests) {
             var jane;
             var rueDEssert = address({
               address: "15, Rue d'Essert",
-              people: function() {
+              people: function(address) {
                 return [
                   bob = person({
                     name: "bob",
-                    address: this
+                    address: address
                   }),
                   jane = person({
                     name: "jane",
-                    address: this
+                    address: address
                   })
                 ];
               }
@@ -923,15 +947,15 @@ module.exports = function(name, config, database, otherTests) {
           it("one to many relationships with functions aren't saved twice", function() {
             var rueDEssert = address({
               address: "15, Rue d'Essert",
-              people: function() {
+              people: function(address) {
                 return [
                   person({
                     name: "bob",
-                    address: this
+                    address: address
                   }),
                   person({
                     name: "jane",
-                    address: this
+                    address: address
                   })
                 ];
               }
