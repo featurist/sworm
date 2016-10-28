@@ -205,6 +205,8 @@ Connection options:
 
       The driver will use connection pooling if you pass `pool: true`.
 
+      By default the driver is set to `autoCommit = true`, you can pass `options: { autoCommit: false}` to turn this off again.
+
       ```js
       {
         user: 'username',
