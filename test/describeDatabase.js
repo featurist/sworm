@@ -66,7 +66,7 @@ module.exports = function(name, config, database, otherTests) {
             var originalLog = this.log;
             this.log = undefined;
 
-            var match = /^[a-z]*/i.exec(sql);
+            var match = /^(insert|update|delete|select|begin|commit|rollback)/.exec(sql);
             statements.push(match[1]);
 
             this.logResults.apply(this, arguments);
@@ -193,7 +193,19 @@ module.exports = function(name, config, database, otherTests) {
           });
         });
 
-        describe.only('transactions', function () {
+        describe('transactions', function () {
+          beforeEach(function () {
+            if (database.setAutoCommit) {
+              database.setAutoCommit(false);
+            }
+          });
+
+          afterEach(function () {
+            if (database.setAutoCommit) {
+              database.setAutoCommit(true);
+            }
+          });
+
           describe('rollback', function () {
             describe('explicit', function () {
               it('rolls back when rollback is called', function () {
@@ -206,7 +218,8 @@ module.exports = function(name, config, database, otherTests) {
                       {
                         id: bob.id,
                         name: 'bob',
-                        address_id: null
+                        address_id: null,
+                        photo: null
                       }
                     ]);
                   }).then(() => {
@@ -222,7 +235,7 @@ module.exports = function(name, config, database, otherTests) {
             });
 
             describe('scoped', function () {
-              it.only('rolls back if the transaction scope throws an exception', function () {
+              it('rolls back if the transaction scope throws an exception', function () {
                 return expect(db.transaction(function () {
                   var bob = person({ name: 'bob' });
                   return bob.save().then(() => {
@@ -232,7 +245,8 @@ module.exports = function(name, config, database, otherTests) {
                       {
                         id: bob.id,
                         name: 'bob',
-                        address_id: null
+                        address_id: null,
+                        photo: null
                       }
                     ]);
 
@@ -260,7 +274,8 @@ module.exports = function(name, config, database, otherTests) {
                       {
                         id: bob.id,
                         name: 'bob',
-                        address_id: null
+                        address_id: null,
+                        photo: null
                       }
                     ]);
                   }).then(() => {
@@ -272,7 +287,8 @@ module.exports = function(name, config, database, otherTests) {
                       {
                         id: bob.id,
                         name: 'bob',
-                        address_id: null
+                        address_id: null,
+                        photo: null
                       }
                     ]);
                   });
@@ -293,7 +309,8 @@ module.exports = function(name, config, database, otherTests) {
                       {
                         id: bob.id,
                         name: 'bob',
-                        address_id: null
+                        address_id: null,
+                        photo: null
                       }
                     ]);
                   });
@@ -304,7 +321,8 @@ module.exports = function(name, config, database, otherTests) {
                     {
                       id: bob.id,
                       name: 'bob',
-                      address_id: null
+                      address_id: null,
+                      photo: null
                     }
                   ]);
                 });
@@ -703,7 +721,7 @@ module.exports = function(name, config, database, otherTests) {
                   name: "jane"
                 });
                 return jane.save().then(function() {
-                  return person.query("select * from people").then(function(people) {
+                  return person.query("select * from people order by name").then(function(people) {
                     expect(people.map(function(p) {
                       return p.name;
                     })).to.eql([ "bob", "jane" ]);
@@ -712,7 +730,7 @@ module.exports = function(name, config, database, otherTests) {
                       people[1].name = "jenifer";
 
                       return people[1].save().then(function() {
-                        return db.query("select * from people").then(function(people) {
+                        return db.query("select * from people order by name").then(function(people) {
                           expect(people.map(function(p) {
                             return p.name;
                           })).to.eql([ "bob", "jenifer" ]);

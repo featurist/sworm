@@ -52,18 +52,6 @@ module.exports = function() {
       });
     },
 
-    begin: function (options) {
-      return this.query('begin' + (options? ' ' + options: ''));
-    },
-
-    commit: function () {
-      return this.query('commit');
-    },
-
-    rollback: function () {
-      return this.query('rollback');
-    },
-
     connect: function(config) {
       var self = this;
       var options = connectionOptions(config);

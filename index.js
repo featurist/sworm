@@ -468,15 +468,27 @@ exports.db = function(config) {
     },
 
     begin: function (options) {
-      return this.statement('begin' + (options? ' ' + options: ''));
+      if (this.driver.begin) {
+        return this.driver.begin(options);
+      } else {
+        return this.statement('begin' + (options? ' ' + options: ''));
+      }
     },
 
     commit: function () {
-      return this.statement('commit');
+      if (this.driver.commit) {
+        return this.driver.commit();
+      } else {
+        return this.statement('commit');
+      }
     },
 
     rollback: function () {
-      return this.statement('rollback');
+      if (this.driver.rollback) {
+        return this.driver.rollback();
+      } else {
+        return this.statement('rollback');
+      }
     },
 
     close: function() {
