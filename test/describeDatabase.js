@@ -744,7 +744,7 @@ module.exports = function(name, config, database, otherTests) {
           });
         });
 
-        return describe("foreign keys", function() {
+        describe("foreign keys", function() {
           it("can save a many to one relationship", function() {
             var bob = person({
                 name: "bob",
@@ -1082,9 +1082,30 @@ module.exports = function(name, config, database, otherTests) {
             });
           });
         });
+
+        describe('unescape', function () {
+          it('can unescape parameters', function () {
+            return Promise.all([
+              person({name: 'jack'}).save(),
+              person({name: 'jane'}).save(),
+              person({name: 'jen'}).save()
+            ]).then(function () {
+              return db.query('select * from people where name in (@name) order by name', {name: sworm.unescape(['jane', 'jen'].map(sworm.escape).join(','))})
+            }).then(function (rows) {
+              expect(rows.map(function (r) { return r.name })).to.eql([
+                'jane',
+                'jen'
+              ])
+            });
+          });
+        });
       });
 
       describe("connection", function() {
+        function clear(db) {
+          return db.query('delete from people');
+        }
+
         it("can define models before connecting to database", function() {
           var schema = sworm.db();
 
@@ -1097,6 +1118,8 @@ module.exports = function(name, config, database, otherTests) {
           });
 
           return schema.connect(config).then(function() {
+            return clear(schema)
+          }).then(function () {
             return bob.save().then(function() {
               return schema.query("select * from people").then(function(people) {
                 expect(people.map(function (p) {

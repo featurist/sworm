@@ -9,12 +9,14 @@ var debug = require("debug")("sworm");
 var debugResults = require("debug")("sworm:results");
 var redactConfig = require('./redactConfig');
 var urlUtils = require('url')
+var unescape = require('./unescape')
 
 var rowBase = function() {
   function fieldsForObject(obj) {
     return Object.keys(obj).filter(function (key) {
       var value = obj[key];
       return value instanceof Date
+        || unescape.isUnescape(value)
         || value instanceof Buffer
         || !(
           value === null
@@ -30,7 +32,7 @@ var rowBase = function() {
         return false;
       } else {
         var value = obj[key];
-        return !(value instanceof Date) && !(value instanceof Buffer) && value instanceof Object;
+        return !(value instanceof Date) && !(unescape.isUnescape(value)) && !(value instanceof Buffer) && value instanceof Object;
       }
     });
   }
@@ -326,8 +328,11 @@ exports.db = function(config) {
       return model;
     },
 
-    query: function(query, params, options) {
+    query: function(_query, _params, options) {
       var self = this;
+      var queryParams = unescape.interpolate(_query, _params)
+      var query = queryParams.query
+      var params = queryParams.params
 
       return this.whenConnected(function () {
         var command = options && options.insert
@@ -512,6 +517,15 @@ exports.db = function(config) {
 
   return db;
 };
+
+exports.unescape = unescape
+exports.escape = function(value) {
+  if (typeof value == 'string') {
+    return "'" + value.replace(/'/g, "''") + "'"
+  } else {
+    return value
+  }
+}
 
 function configFromUrl(url) {
   var parsedUrl = urlUtils.parse(url)

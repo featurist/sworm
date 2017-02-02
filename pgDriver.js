@@ -2,6 +2,8 @@ var promisify = require('./promisify');
 var optionalRequire = require("./optionalRequire");
 var debug = require('debug')('sworm:pg');
 var urlUtils = require('url');
+var _ = require('underscore')
+var paramRegex = require('./paramRegex')
 
 module.exports = function() {
   var pg = optionalRequire("pg");
@@ -12,27 +14,17 @@ module.exports = function() {
       var paramList = [];
 
       if (params) {
-        var indexedParams = {};
-        var keys = Object.keys(params);
-
-        for (var n = 0; n < keys.length; ++n) {
-          var key = keys[n];
-          var value = params[key];
-
-          indexedParams[key] = {
-            index: n + 1,
-            value: value
-          };
-
+        var paramIndexes = _.mapObject(params, function (value) {
           paramList.push(value);
-        }
+          return paramList.length
+        })
 
-        query = query.replace(new RegExp('@([a-zA-Z_0-9]+)\\b', 'g'), function(_, paramName) {
-          var param = indexedParams[paramName];
-          if (!param) {
-            throw new Error('no such parameter @' + paramName);
+        query = query.replace(paramRegex, function(_, name) {
+          if (paramIndexes.hasOwnProperty(name)) {
+            return '$' + paramIndexes[name]
+          } else {
+            throw new Error('no such parameter @' + name);
           }
-          return '$' + indexedParams[paramName].index;
         });
       }
 

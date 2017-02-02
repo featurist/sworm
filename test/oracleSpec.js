@@ -78,6 +78,11 @@ if (!process.env.TRAVIS) {
           'create table with_string_id(id varchar(10) primary key, name varchar2(50) NOT NULL)',
           true
         );
+      }).then(function() {
+        return createTable("names", "id",
+          'create table names(id number primary key, name varchar2(50) NOT NULL)',
+          true
+        );
       });
     },
 
@@ -240,6 +245,23 @@ if (!process.env.TRAVIS) {
           });
         });
       });
+
+      describe('referring to sequence in insert', function () {
+        it('can insert with sequence', function () {
+          var name = db.model({table: 'names'});
+
+          var bob = name({
+            id: sworm.unescape('people_seq.nextVal'),
+            name: 'bob'
+          })
+
+          return bob.save().then(function () {
+            return db.query('select people_seq.nextVal as id from dual')
+          }).then(function (rows) {
+            expect(rows[0].id).to.equal(bob.id + 1)
+          });
+        })
+      })
 
       afterEach(function () {
         return db.close();

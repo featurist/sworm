@@ -35,4 +35,10 @@ describe("sworm", function() {
       bob.save();
     }).to.throw('sworm has not been configured to a database');
   });
+
+  describe('escape', function() {
+    it('escapes any number of single quotes', function () {
+      expect(sworm.escape("this is bob's and katie's address")).to.equal("'this is bob''s and katie''s address'")
+    });
+  })
 });

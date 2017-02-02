@@ -1,6 +1,7 @@
 var promisify = require('./promisify');
 var optionalRequire = require("./optionalRequire");
 var debug = require('debug')('sworm:mysql');
+var paramRegex = require('./paramRegex')
 
 module.exports = function() {
   var mysql = optionalRequire("mysql");
@@ -11,13 +12,13 @@ module.exports = function() {
       var paramList = [];
 
       if (params) {
-        query = query.replace(new RegExp('@([a-zA-Z_0-9]+)\\b', 'g'), function(_, paramName) {
+        query = query.replace(paramRegex, function(_, paramName) {
           if (!params.hasOwnProperty(paramName)) {
-            throw new Error("no such parameter @" + paramName);
+            throw new Error('no such parameter @' + paramName);
           } else {
             paramList.push(params[paramName]);
           }
-          return "?";
+          return '?';
         });
       }
 

@@ -543,6 +543,42 @@ In SQL:
     | 23         | 11        |
     --------------------------
 
+# Unescaping
+
+It's sometimes useful to pass in some real unescaped SQL, for this you can use `sworm.unescape()` for model values or query parameters.
+
+Usual qualifiers apply here: when using this feature, make sure to protect your application from SQL injection by properly escaping strings with `sworm.escape()` or by being extra careful!
+
+For example, you can pass in an array of values for an `in (...)` statement:
+
+```js
+db.query('select * from people where names in (@names)', {names: sworm.unescape("'bob', 'jane'")})
+```
+
+will become
+
+```sql
+select * from people where names in ('bob', 'jane')
+```
+
+These parameters are not passed to the database driver.
+
+This is also useful for handling differences in database drivers, such as `sysdate` or `now`:
+
+```js
+db.query('select * from people where subscription_date < @now', {now: sworm.unescape(usingSqlite? "date('now')": "now()")})
+```
+
+Or, to refer to SQL features when inserting, such as sequences in oracle:
+
+```js
+person({id: sworm.unescape('sequence.nextVal'), name: 'bob'}).save()
+```
+
+## Escaping
+
+Use `sworm.escape(string)` to escape strings.
+
 # Queries
 
 ```js
