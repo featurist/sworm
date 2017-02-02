@@ -14,10 +14,7 @@ function urlConfig(name, extras) {
     url = addUrlParams(url, extras);
   }
 
-  return {
-    driver: "pg",
-    url: url
-  };
+  return url
 }
 
 function config(name, extras) {
@@ -92,7 +89,7 @@ var database = {
   driverModuleName: "pg"
 };
 
-describeDatabase("postgres", urlConfig('sworm'), database, function () {
+describeDatabase("postgres", config('sworm'), database, function () {
   describe('config options', function () {
     var db;
 

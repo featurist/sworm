@@ -8,6 +8,7 @@ var sqliteDriver = require("./sqliteDriver");
 var debug = require("debug")("sworm");
 var debugResults = require("debug")("sworm:results");
 var redactConfig = require('./redactConfig');
+var urlUtils = require('url')
 
 var rowBase = function() {
   function fieldsForObject(obj) {
@@ -394,6 +395,9 @@ exports.db = function(config) {
       if (config) {
         this.config = config;
       }
+      if (typeof this.config == 'string') {
+        this.config = configFromUrl(this.config)
+      }
 
       var self = this;
 
@@ -508,3 +512,17 @@ exports.db = function(config) {
 
   return db;
 };
+
+function configFromUrl(url) {
+  var parsedUrl = urlUtils.parse(url)
+  var protocol = parsedUrl.protocol.replace(/:$/, '')
+  var driver = {
+    postgres: 'pg',
+    file: 'sqlite'
+  }[protocol] || protocol
+
+  return {
+    driver: driver,
+    url: url
+  }
+}
