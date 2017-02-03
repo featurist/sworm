@@ -636,6 +636,38 @@ Statements are just like queries but they don't bother to parse or log the resul
 db.statement(query, [params, [options]]);
 ```
 
+# update, insert, upsert
+
+You can explicitly `insert`, `update` or `upsert` a record:
+
+```js
+var bob = person({name: 'bob'})
+bob.insert()
+// insert into people (name) values ('bob')
+```
+
+```js
+var bob = person({name: 'bob', id: 4})
+bob.update()
+// update people set name = 'bob' where id = 4
+```
+
+Upsert works by detecting the presence of an id, if there is an id, it updates the record, if not it inserts it.
+
+```js
+var bob = person({name: 'bob'})
+bob.upsert()
+// insert into people (name) values ('bob')
+```
+
+```js
+var bob = person({name: 'bob', id: 4})
+bob.upsert()
+// update people set name = 'bob' where id = 4
+```
+
+For updates, an error is thrown if there are no records found with that id, or indeed if no id is given.
+
 # Transactions
 
 You can insert update or query the database using transactions. Transactions can be used in two forms, explicitly running `db.begin()`, `db.commit()` and `db.rollback()`, or by calling `db.transaction(fn)` with a function that will commit automatically if it didn't fail.

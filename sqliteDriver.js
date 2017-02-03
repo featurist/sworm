@@ -16,18 +16,18 @@ module.exports = function() {
         });
       }
 
-      if (options && (options.statement || options.insert)) {
+      if (options.statement || options.insert) {
         return new Promise(function (fulfil, reject) {
           debug(query, sqliteParams);
           self.connection.run(query, sqliteParams, function (error) {
             if (error) {
               reject(error);
             } else {
-              fulfil({lastId: this.lastID});
+              fulfil({id: this.lastID, changes: this.changes});
             }
           });
         });
-      } else if (options && (options.exec || options.multiline)) {
+      } else if (options.exec || options.multiline) {
         return promisify(function (cb) {
           debug(query, sqliteParams);
           self.connection.exec(query, cb);
@@ -41,9 +41,7 @@ module.exports = function() {
     },
 
     insert: function(query, params, options) {
-      return this.query(query, params, options).then(function (rows) {
-        return rows.lastId;
-      });
+      return this.query(query, params, options)
     },
 
     connect: function(config) {

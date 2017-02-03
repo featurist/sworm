@@ -6,7 +6,7 @@ module.exports = function() {
   var sql = optionalRequire("mssql");
 
   return {
-    query: function(query, params) {
+    query: function(query, params, options) {
       var request = new sql.Request(this.transaction || this.connection);
 
       if (params) {
@@ -15,10 +15,24 @@ module.exports = function() {
         });
       }
 
-      return promisify(function(cb) {
-        debug(query, params);
-        return request.query(query, cb);
-      });
+      debug(query, params);
+      return request.query(query).then(function (result) {
+        if (options.statement || options.insert) {
+          var r = {}
+
+          if (options.statement) {
+            r.changes = request.rowsAffected
+          }
+
+          if (options.insert) {
+            r.id = result[0][options.id]
+          }
+
+          return r
+        } else {
+          return result
+        }
+      })
     },
 
     connect: function(config) {
@@ -57,9 +71,7 @@ module.exports = function() {
     insert: function(query, params, options) {
       var id = options.id;
 
-      return this.query(query + "; select scope_identity() as " + id, params).then(function (rows) {
-        return rows[0][id];
-      });
+      return this.query(query + "; select scope_identity() as " + id, params, options)
     },
 
     close: function() {

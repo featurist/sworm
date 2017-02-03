@@ -67,11 +67,11 @@ var rowBase = function() {
         insert: !obj._meta.compoundKey,
         statement: obj._meta.compoundKey,
         id: obj._meta.id
-      }).then(function (insertedId) {
+      }).then(function (result) {
         obj.setSaved();
 
         if (!obj._meta.compoundKey) {
-          obj[obj._meta.id] = insertedId;
+          obj[obj._meta.id] = result.id;
         }
 
         return obj.setNotChanged();
@@ -105,8 +105,12 @@ var rowBase = function() {
 
     var statementString = 'update ' + obj._meta.table + ' set ' + assignments + ' where ' + whereClause;
 
-    return obj._meta.db.query(statementString, _.pick(obj, keys), {statement: true}).then(function() {
-      return obj.setNotChanged();
+    return obj._meta.db.query(statementString, _.pick(obj, keys), {statement: true}).then(function(result) {
+      if (result.changes == 0) {
+        throw new Error(obj._meta.table + ' entity with ' + obj._meta.id + ' = ' + obj.identity() + ' not found to update')
+      } else {
+        return obj.setNotChanged();
+      }
     });
   }
 
@@ -276,6 +280,18 @@ var rowBase = function() {
           value: true
         });
       }
+    },
+
+    insert: function () {
+      return insert(this)
+    },
+
+    update: function () {
+      return update(this)
+    },
+
+    upsert: function () {
+      return update(this)
     }
   };
 }();
@@ -328,14 +344,15 @@ exports.db = function(config) {
       return model;
     },
 
-    query: function(_query, _params, options) {
+    query: function(_query, _params, _options) {
       var self = this;
       var queryParams = unescape.interpolate(_query, _params)
       var query = queryParams.query
       var params = queryParams.params
+      var options = _options || {}
 
       return this.whenConnected(function () {
-        var command = options && options.insert
+        var command = options.insert
           ? self.driver.insert(query, params, options)
           : self.driver.query(query, params, options)
 
@@ -376,9 +393,9 @@ exports.db = function(config) {
             debug(query);
           }
 
-          if (options && options.insert) {
+          if (options.insert) {
             return debugResults('id = ' + results);
-          } else if (!(options && options.statement) && results) {
+          } else if (!options.statement && results) {
             return debugResults(results);
           }
         }

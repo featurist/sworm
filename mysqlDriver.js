@@ -7,7 +7,7 @@ module.exports = function() {
   var mysql = optionalRequire("mysql");
 
   return {
-    query: function(query, params) {
+    query: function(query, params, options) {
       var self = this;
       var paramList = [];
 
@@ -24,14 +24,21 @@ module.exports = function() {
 
       return promisify(function(cb) {
         debug(query, paramList);
-        return self.connection.query(query, paramList, cb);
-      });
+        return self.connection.query(query, paramList, cb)
+      }).then(function (result) {
+        if (options.insert || options.statement) {
+          return {
+            id: result.insertId,
+            changes: result.affectedRows + result.changedRows
+          }
+        } else {
+          return result
+        }
+      })
     },
 
-    insert: function(query, params) {
-      return this.query(query + "; select last_insert_id() as id", params).then(function (rows) {
-        return rows[1][0].id;
-      });
+    insert: function(query, params, options) {
+      return this.query(query, params, options)
     },
 
     connect: function(config) {

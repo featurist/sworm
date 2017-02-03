@@ -16,12 +16,26 @@ module.exports = function () {
     outstandingQueries: outstandingQueries(),
 
     query: function (query, params, options) {
-      var results = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options));
+      var resultsPromise = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options));
 
-      if (options && (options.statement || options.insert || options.formatRows == false)) {
-        return results;
+      if (options.statement || options.insert) {
+        return resultsPromise.then(function (results) {
+          var r = {}
+
+          if (options.statement) {
+            r.changes = results.rowsAffected
+          }
+
+          if (options.insert) {
+            r.id = results.outBinds.returning_into_id[0]
+          }
+
+          return r
+        })
+      } else if (options.formatRows == false) {
+        return resultsPromise;
       } else {
-        return results.then(function (r) {
+        return resultsPromise.then(function (r) {
           return formatRows(r);
         });
       }
@@ -38,9 +52,7 @@ module.exports = function () {
     insert: function(query, params, options) {
       var id = options.id;
 
-      return this.query(query + ' returning ' + id + ' into :returning_into_id', params, options).then(function (rows) {
-        return rows.outBinds.returning_into_id[0];
-      });
+      return this.query(query + ' returning ' + id + ' into :returning_into_id', params, options)
     },
 
     generateTransactionName: function() {

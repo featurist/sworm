@@ -532,6 +532,15 @@ module.exports = function(name, config, database, otherTests) {
         });
 
         describe("saved and modified", function() {
+          var existing
+
+          beforeEach(function () {
+            existing = person({name: 'somebody'})
+            return existing.save().then(function () {
+              statements = []
+            })
+          });
+
           it("inserts when created for the first time", function() {
             return person({
               name: "bob"
@@ -547,7 +556,7 @@ module.exports = function(name, config, database, otherTests) {
               expect(statements).to.eql([]);
 
               bob.name = "jane";
-              bob.id = 1;
+              bob.id = existing.id;
 
               return bob.save().then(function() {
                 expect(statements).to.eql([ "update" ]);
@@ -557,7 +566,7 @@ module.exports = function(name, config, database, otherTests) {
 
           it("updates when created with saved = true and force = true", function() {
             return person({
-              id: 1,
+              id: existing.id,
               name: "bob"
             }, { saved: true }).save({ force: true }).then(function() {
               expect(statements).to.eql([ "update" ]);
@@ -566,7 +575,7 @@ module.exports = function(name, config, database, otherTests) {
 
           it("updates when created with saved = true and modified = true", function() {
             return person({
-              id: 1,
+              id: existing.id,
               name: "bob"
             }, {
               saved: true,
@@ -1097,6 +1106,90 @@ module.exports = function(name, config, database, otherTests) {
                 'jen'
               ])
             });
+          });
+        });
+
+        describe('insert', function () {
+          var personExplicitId
+
+          beforeEach(function () {
+            personExplicitId = db.model({
+              table: "people_explicit_id"
+            });
+          })
+
+          it('can insert with id set', function () {
+            var bob = personExplicitId({name: 'bob', id: 4})
+
+            return bob.insert().then(function () {
+              return db.query('select * from people_explicit_id where id = 4')
+            }).then(function (rows) {
+              expect(rows.map(function (r) { return r.name })).to.eql([
+                'bob'
+              ])
+            })
+          });
+
+          it('can insert without id set', function () {
+            var bob = person({name: 'bob'})
+
+            return bob.insert().then(function () {
+              return db.query('select * from people where id = @id', {id: bob.id})
+            }).then(function (rows) {
+              expect(rows.map(function (r) { return r.name })).to.eql([
+                'bob'
+              ])
+            })
+          });
+        });
+
+        describe('update', function () {
+          it('can update with id set', function () {
+            var bob = person({name: 'bob'})
+
+            return bob.save().then(function () {
+              var bob2 = person({name: 'bob2', id: bob.id})
+
+              return bob2.update()
+            }).then(function () {
+              return db.query('select * from people')
+            }).then(function (rows) {
+              expect(rows.map(function (r) { return r.name })).to.eql([
+                'bob2'
+              ])
+            })
+          });
+
+          it('cannot update without id set', function () {
+            var bob = person({name: 'bob'})
+
+            return bob.save().then(function () {
+              var bob2 = person({name: 'bob2'})
+
+              return expect(function () {
+                bob2.update()
+              }).to.throw('entity must have id to be updated')
+            })
+          });
+
+          it('cannot update without id set', function () {
+            var bob = person({name: 'bob'})
+
+            return bob.save().then(function () {
+              var bob2Id = bob.id + 1
+              var bob2 = person({name: 'bob2', id: bob2Id})
+
+              return expect(bob2.update()).to.eventually.be.rejectedWith('people entity with id = ' + bob2Id + ' not found to update')
+            })
+          });
+        });
+
+        describe('upsert', function () {
+          it('inserts when there is no id', function () {
+            var bob = person({name: 'bob'})
+
+            return bob.save().then(function () {
+            })
           });
         });
       });

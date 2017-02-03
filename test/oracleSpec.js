@@ -71,7 +71,8 @@ if (!process.env.TRAVIS) {
         );
       }).then(function() {
         return createTable("people_explicit_id", "id",
-          'create table people_explicit_id(id int NOT NULL, name varchar2(50) NOT NULL)'
+          'create table people_explicit_id(id int NOT NULL, name varchar2(50) NOT NULL)',
+          true
         );
       }).then(function() {
         return createTable("with_string_id", "id",

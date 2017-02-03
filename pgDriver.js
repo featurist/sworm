@@ -9,7 +9,7 @@ module.exports = function() {
   var pg = optionalRequire("pg");
 
   return {
-    query: function(query, params) {
+    query: function(query, params, options) {
       var self = this;
       var paramList = [];
 
@@ -32,16 +32,28 @@ module.exports = function() {
         debug(query, paramList);
         return self.connection.query(query, paramList, cb);
       }).then(function(result) {
-        return result.rows;
+        if (options.statement || options.insert) {
+          var r = {}
+
+          if (options.statement) {
+            r.changes = result.rowCount
+          }
+
+          if (options.insert) {
+            r.id = result.rows[0][options.id]
+          }
+
+          return r
+        } else {
+          return result.rows;
+        }
       });
     },
 
     insert: function(query, params, options) {
       var id = options.id;
 
-      return this.query(query + ' returning ' + id, params).then(function (rows) {
-        return rows[0][id];
-      });
+      return this.query(query + ' returning ' + id, params, options)
     },
 
     connect: function(config) {
