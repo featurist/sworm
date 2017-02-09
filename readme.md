@@ -149,100 +149,17 @@ db.connect(function () {
 });
 ```
 
-Connection options:
+## Connection options:
 
-  * `driver`, one of `'mssql'`, `'mysql'`, `'pg'`, `'oracle'` or `'sqlite'`.
-  * `config` configuration passed to the selected driver:
+```js
+sworm.db(options)
+sworm.db(url)
+```
 
-    * **mysql**
+  * `url`
 
-      See: [https://github.com/felixge/node-mysql#connection-options](https://github.com/felixge/node-mysql#connection-options)
-
-      ```js
-      {
-        user: 'username',
-        password: 'password',
-        host: 'localhost',
-        database: 'database name'
-      }
-      ```
-
-    * **mssql**
-
-      See: [https://github.com/patriksimek/node-mssql#configuration-1](https://github.com/patriksimek/node-mssql#configuration-1)
-
-      ```js
-      {
-        user: 'username',
-        password: 'password',
-        server: 'localhost',
-        database: 'databaseName'
-      }
-      ```
-
-    * **pg**
-
-      See also the `url` option below.
-
-      See: [https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback)
-
-      The driver will use connection pooling if you pass `pool: true`.
-
-      ```js
-      {
-        user: 'username',
-        password: 'password',
-        host: 'localhost',
-        database: 'database name',
-        pool: true
-      }
-      ```
-
-    * **oracle**
-
-      See: [getConnection()](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection)
-      For `options` see [Oracledb Properties](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#oracledbproperties)
-
-      The driver will use connection pooling if you pass `pool: true`.
-
-      By default the driver is set to `autoCommit = true`, you can pass `options: { autoCommit: false}` to turn this off again.
-
-      ```js
-      {
-        user: 'username',
-        password: 'password',
-        connectString: 'localhost/XE',
-        pool: true,
-
-        options: {
-          // options to set on `oracledb`
-          maxRows: 1000
-        }
-      }
-      ```
-
-      The driver can also use an existing pool:
-
-      ```js
-      {
-        pool: pool // from oracledb.createPool(config, cb),
-
-        options: {
-          // options to set on `oracledb`
-          maxRows: 1000
-        }
-      }
-      ```
-
-    * **sqlite**
-
-      See: [https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback](https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback)
-
-      ```js
-      {
-        filename: 'filename or :memory:'
-      }
-      ```
+  * `options.driver`, one of `'mssql'`, `'mysql'`, `'pg'`, `'oracle'` or `'sqlite'`.
+  * `options.config` configuration passed to the selected driver:
 
   * `url` a connection URL, the following are supported
     * `pg` - `postgres://user:password@host:5432/database`. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
@@ -267,6 +184,120 @@ Connection options:
     ```
 
     Defaults to `false`, no logging.
+
+### Driver Connection Config
+
+* **mysql**
+
+  See: [https://github.com/felixge/node-mysql#connection-options](https://github.com/felixge/node-mysql#connection-options)
+
+  ```js
+  {
+    driver: 'mysql',
+    config: {
+      user: 'username',
+      password: 'password',
+      host: 'localhost',
+      database: 'database name'
+    }
+  }
+  ```
+
+* **mssql**
+
+  See: [https://github.com/patriksimek/node-mssql#configuration-1](https://github.com/patriksimek/node-mssql#configuration-1)
+
+  ```js
+  {
+    driver: 'mssql',
+    config: {
+      user: 'username',
+      password: 'password',
+      server: 'localhost',
+      database: 'databaseName'
+    }
+  }
+  ```
+
+* **postgres**
+
+  URL: `postgres://user:password@host:5432/database`. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
+
+  See: [https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback)
+
+  The driver will use connection pooling if you pass `pool: true`.
+
+  ```js
+  {
+    driver: 'pg',
+    config: {
+      user: 'username',
+      password: 'password',
+      host: 'localhost',
+      database: 'database name',
+      pool: true
+    }
+  }
+  ```
+
+* **oracle**
+
+  URL: `oracle://user:password@host:port/sid&maxRows=100000&pool=true`
+
+  See: [getConnection()](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection)
+  For `options` see [Oracledb Properties](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#oracledbproperties)
+
+  The driver will use connection pooling if you pass `pool: true`.
+
+  By default the driver is set to `autoCommit = true`, you can pass `options: { autoCommit: false}` to turn this off again.
+
+  ```js
+  {
+    driver: 'oracle',
+    config: {
+      user: 'username',
+      password: 'password',
+      connectString: 'localhost/XE',
+      pool: true,
+
+      options: {
+        // options to set on `oracledb`
+        maxRows: 1000
+      }
+    }
+  }
+  ```
+
+  The driver can also use an existing pool:
+
+  ```js
+  {
+    driver: 'oracle',
+    config: {
+      pool: pool // from oracledb.createPool(config, cb),
+
+      options: {
+        // options to set on `oracledb`
+        maxRows: 1000
+      }
+    }
+  }
+  ```
+
+* **sqlite**
+
+  URL: `file:///absolute/path/to/database.db` or `file:relative/path/to/database.db`
+
+  See: [https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback](https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback)
+
+  ```js
+  {
+    driver: 'sqlite',
+    config: {
+      filename: 'filename or :memory:'
+    }
+  }
+  ```
 
 ### Close
 
@@ -566,7 +597,10 @@ These parameters are not passed to the database driver.
 This is also useful for handling differences in database drivers, such as `sysdate` or `now`:
 
 ```js
-db.query('select * from people where subscription_date < @now', {now: sworm.unescape(usingSqlite? "date('now')": "now()")})
+db.query(
+  'select * from people where subscription_date < @now',
+  {now: sworm.unescape(usingSqlite? "date('now')": "now()")},
+)
 ```
 
 Or, to refer to SQL features when inserting, such as sequences in oracle:
