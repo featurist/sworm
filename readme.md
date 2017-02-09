@@ -156,10 +156,10 @@ sworm.db(options)
 sworm.db(url)
 ```
 
-  * `url`
+  * `url`, see urls for databases in respective section below
 
   * `options.driver`, one of `'mssql'`, `'mysql'`, `'pg'`, `'oracle'` or `'sqlite'`.
-  * `options.config` configuration passed to the selected driver:
+  * `options.config` see configuration for databases in respective section below
 
   * `url` a connection URL, the following are supported
     * `pg` - `postgres://user:password@host:5432/database`. See the [`pg` url format](https://github.com/brianc/node-postgres/wiki/pg#connectstring-connectionstring-function-callback).
