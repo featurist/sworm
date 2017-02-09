@@ -1,6 +1,7 @@
 var sworm = require("..");
 var chai = require("chai");
 var expect = chai.expect;
+var unescape = require('../unescape')
 
 describe("sworm", function() {
   it("throws exception if no driver is specified or found", function() {
@@ -39,6 +40,35 @@ describe("sworm", function() {
   describe('escape', function() {
     it('escapes any number of single quotes', function () {
       expect(sworm.escape("this is bob's and katie's address")).to.equal("'this is bob''s and katie''s address'")
+    });
+  })
+
+  describe('interpolate', function() {
+    it('interpolates unescaped parameters', function () {
+      expect(unescape.interpolate('select * from people where name = @name', {name: unescape("'bob'")})).to.eql(
+        {
+          query: "select * from people where name = 'bob'",
+          params: {}
+        }
+      )
+    });
+
+    it("doesn't interpolate non-unescaped parameters", function () {
+      expect(unescape.interpolate('select * from people where name = @name', {name: "'bob'"})).to.eql(
+        {
+          query: "select * from people where name = @name",
+          params: {name: "'bob'"}
+        }
+      )
+    });
+
+    it("doesn't interpolate non-specified parameters", function () {
+      expect(unescape.interpolate('select * from people where name = @name', {})).to.eql(
+        {
+          query: "select * from people where name = @name",
+          params: {}
+        }
+      )
     });
   })
 });

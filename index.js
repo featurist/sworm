@@ -451,7 +451,7 @@ exports.db = function(config) {
 
         if (self.config.setupSession) {
           self.runningBeginSession = true;
-          return self.config.setupSession(self).then(function (result) {
+          return Promise.resolve(self.config.setupSession(self)).then(function (result) {
             self.runningBeginSession = false;
             return result;
           }, function (error) {

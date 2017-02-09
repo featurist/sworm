@@ -27,6 +27,8 @@ unescape.interpolate = function(query, params) {
       } else {
         return _
       }
+    } else {
+      return _
     }
   })
 
