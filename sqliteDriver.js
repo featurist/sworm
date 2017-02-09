@@ -1,6 +1,7 @@
 var promisify = require('./promisify');
 var optionalRequire = require("./optionalRequire");
 var debug = require('debug')('sworm:sqlite');
+var urlUtils = require('url')
 
 module.exports = function() {
   var sqlite = optionalRequire('sqlite3');
@@ -44,14 +45,15 @@ module.exports = function() {
       return this.query(query, params, options)
     },
 
-    connect: function(config) {
+    connect: function(options) {
       var self = this;
+      var config = parseConfig(options)
 
       return promisify(function(cb) {
-        if (config.mode) {
-          self.connection = new sqlite.Database(config.config.filename, config.config.mode, cb);
+        if (options.mode) {
+          self.connection = new sqlite.Database(config.filename, config.mode, cb);
         } else {
-          self.connection = new sqlite.Database(config.config.filename, cb);
+          self.connection = new sqlite.Database(config.filename, cb);
         }
       });
     },
@@ -64,3 +66,21 @@ module.exports = function() {
     }
   };
 };
+
+function parseConfig(options) {
+  if (options.url) {
+    var url = urlUtils.parse(options.url)
+
+    if (url.protocol) {
+      return {
+        filename: url.pathname
+      }
+    } else {
+      return {
+        filename: options.url
+      }
+    }
+  } else {
+    return options.config
+  }
+}

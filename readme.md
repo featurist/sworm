@@ -286,7 +286,7 @@ sworm.db(url)
 
 * **sqlite**
 
-  URL: `file:///absolute/path/to/database.db` or `file:relative/path/to/database.db`
+  URL: `file:///absolute/path/to/database.db` or `relative/path/to/database.db`
 
   See: [https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback](https://github.com/mapbox/node-sqlite3/wiki/API#new-sqlite3databasefilename-mode-callback)
 

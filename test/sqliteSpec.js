@@ -66,4 +66,16 @@ describeDatabase("sqlite", config, database, function () {
       });
     });
   });
+
+  describe('connection', function () {
+    it('can accept a file: URL', function () {
+      var db = sworm.db('file://' + config.config.filename + '?asdf=asdf');
+      return db.query('select * from people')
+    });
+
+    it('can accept a filename', function () {
+      var db = sworm.db(config.config.filename);
+      return db.query('select * from people')
+    });
+  });
 });

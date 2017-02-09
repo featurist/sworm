@@ -546,7 +546,7 @@ exports.escape = function(value) {
 
 function configFromUrl(url) {
   var parsedUrl = urlUtils.parse(url)
-  var protocol = parsedUrl.protocol.replace(/:$/, '')
+  var protocol = parsedUrl.protocol? parsedUrl.protocol.replace(/:$/, ''): 'sqlite'
   var driver = {
     postgres: 'pg',
     file: 'sqlite'
