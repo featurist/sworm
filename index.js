@@ -384,21 +384,23 @@ exports.db = function(config) {
     },
 
     logResults: function(query, params, results, options) {
-        if (typeof this.log == 'function') {
-          return this.log(query, params, results, options);
+      if (typeof this.log == 'function') {
+        return this.log(query, params, results, options);
+      } else {
+        if (params) {
+          debug(query, params);
         } else {
-          if (params) {
-            debug(query, params);
-          } else {
-            debug(query);
-          }
-
-          if (options.insert) {
-            return debugResults('id = ' + results);
-          } else if (!options.statement && results) {
-            return debugResults(results);
-          }
+          debug(query);
         }
+
+        if (options.insert) {
+          return debugResults('id = ' + results.id);
+        } else if (options.statement) {
+          return debugResults('rows affected = ' + results.changes);
+        } else if (!options.statement && results) {
+          return debugResults(results);
+        }
+      }
     },
 
     ensureConfigured: function() {
