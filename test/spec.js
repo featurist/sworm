@@ -53,6 +53,15 @@ describe("sworm", function() {
       )
     });
 
+    it("doesn't return unescaped parameters, even if not in the sql", function () {
+      expect(unescape.interpolate('select * from people', {name: unescape("'bob'")})).to.eql(
+        {
+          query: "select * from people",
+          params: {}
+        }
+      )
+    });
+
     it("doesn't interpolate non-unescaped parameters", function () {
       expect(unescape.interpolate('select * from people where name = @name', {name: "'bob'"})).to.eql(
         {

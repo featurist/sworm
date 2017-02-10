@@ -16,7 +16,9 @@ unescape.isUnescape = function (value) {
 }
 
 unescape.interpolate = function(query, params) {
-  var driverParams = _.clone(params)
+  var driverParams = _.omit(params, function (value) {
+    return unescape.isUnescape(value)
+  })
 
   var interpolatedQuery = query.replace(paramRegex, function(_, name) {
     if (params.hasOwnProperty(name)) {
