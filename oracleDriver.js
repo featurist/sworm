@@ -106,8 +106,8 @@ module.exports = function () {
       }
     },
 
-    insertEmpty: function(table, id) {
-      return 'insert into ' + table + ' (' + id + ') values (default)';
+    insertEmpty: function(meta) {
+      return 'insert into ' + meta.table + ' (' + meta.id + ') values (default)';
     },
 
     outputIdKeys: function (idType) {

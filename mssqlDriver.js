@@ -68,10 +68,16 @@ module.exports = function() {
       });
     },
 
-    insert: function(query, params, options) {
-      var id = options.id;
+    insertEmpty: function(meta) {
+      return findInsert(meta).insertEmpty(meta)
+    },
 
-      return this.query(query + "; select scope_identity() as " + id, params, options)
+    insertStatement: function(meta, fields, values) {
+      return findInsert(meta).insertStatement(meta, fields, values)
+    },
+
+    insert: function(query, params, options) {
+      return this.query(query, params, options)
     },
 
     close: function() {
@@ -80,3 +86,47 @@ module.exports = function() {
     }
   };
 };
+
+function findInsert(meta) {
+  var generatedId = (meta.hasOwnProperty('generatedId')? meta.generatedId: undefined) || 'scope_identity';
+
+  if (meta.compoundKey) {
+    return insertNoIdentity
+  } else if (generatedId == 'scope_identity') {
+    return insertScopeIdentity
+  } else if (generatedId == 'output') {
+    return insertOutputIdentity
+  } else {
+    throw new Error('expected generatedId to be either scope_identity or output, found: ' + generatedId)
+  }
+}
+
+var insertScopeIdentity = {
+  insertEmpty: function(meta) {
+    return 'insert into ' + meta.table + ' default values; select scope_identity() as ' + meta.id;
+  },
+
+  insertStatement: function(meta, fields, values) {
+    return 'insert into ' + meta.table + ' (' + fields + ') values (' + values + '); select scope_identity() as ' + meta.id;
+  }
+}
+
+var insertNoIdentity = {
+  insertEmpty: function(meta) {
+    return 'insert into ' + meta.table + ' default values'
+  },
+
+  insertStatement: function(meta, fields, values) {
+    return 'insert into ' + meta.table + ' (' + fields + ') values (' + values + ')';
+  }
+}
+
+var insertOutputIdentity = {
+  insertEmpty: function(meta) {
+    return 'insert into ' + meta.table + ' output inserted.' + meta.id + ' default values'
+  },
+
+  insertStatement: function(meta, fields, values) {
+    return 'insert into ' + meta.table + ' (' + fields + ') output inserted.' + meta.id + ' values (' + values + ')';
+  }
+}

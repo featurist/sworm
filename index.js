@@ -43,12 +43,16 @@ var rowBase = function() {
 
     if (!fields.length) {
       if (obj._meta.db.driver.insertEmpty) {
-        return obj._meta.db.driver.insertEmpty(obj._meta.table, obj._meta.id);
+        return obj._meta.db.driver.insertEmpty(obj._meta);
       } else {
         return 'insert into ' + obj._meta.table + ' default values';
       }
     } else {
-      return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ')';
+      if (obj._meta.db.driver.insertStatement) {
+        return obj._meta.db.driver.insertStatement(obj._meta, fields, values)
+      } else {
+        return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ')';
+      }
     }
   }
 

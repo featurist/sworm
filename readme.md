@@ -331,11 +331,12 @@ There are various schemes you can use:
 var createEntity = db.model(options);
 ```
 
+`createEntity` is a function that can be used to create entities from the model.
+
 `options` can contain the following:
 
   * `table` (`undefined`) the name of the table to save entities to
   * `id` (`'id'`) the name of the identity column. This can be an array of id columns for compound keys, or `false` if there is no id column.
-  * `idType` (`oracledb.NUMBER`) for `oracledb` the type of the identity column, for e.g. `oracledb.STRING`.
   * `foreignKeyFor` a function that returns a foreign key field name for a member (see [Relationships](#relationships)), defaults to:
 
     ```js
@@ -344,7 +345,11 @@ var createEntity = db.model(options);
     }
     ```
 
-`createEntity` is a function that can be used to create entities from the model.
+  * for oracle `idType` (`oracledb.NUMBER`) is the type of the identity column, for e.g. `oracledb.STRING`.
+  * for mssql `generatedId` (`scope_identity`) is the method to get the generated id for insert statements:
+
+    * `scope_identity` uses `scope_identity()` to get the generated id, this is the default.
+    * `output` uses `output inserted.id` to get the generated id. This will work for `uniqueidentifier` column types but is not compatible with tables that have triggers.
 
 ### Model Methods
 
