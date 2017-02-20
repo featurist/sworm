@@ -1,4 +1,3 @@
-var dockerHostname = require('./dockerHostname');
 var describeDatabase = require('./describeDatabase');
 var sworm = require('..');
 var _ = require('underscore');
@@ -8,7 +7,7 @@ var addUrlParams = require('./addUrlParams');
 
 function urlConfig(name, extras) {
   name = name || '';
-  var url = process.env.TRAVIS? 'postgres://postgres@localhost/' + name: 'postgres://postgres:password@' + dockerHostname + '/' + name;
+  var url = process.env.TRAVIS? 'postgres://postgres@localhost/' + name: 'postgres://postgres:password@localhost/' + name;
 
   if (extras) {
     url = addUrlParams(url, extras);
@@ -26,7 +25,7 @@ function config(name, extras) {
       database: name
     }
     : {
-      host: dockerHostname,
+      host: 'localhost',
       user: 'postgres',
       password: 'password',
       database: name

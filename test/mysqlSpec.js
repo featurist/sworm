@@ -1,4 +1,3 @@
-var dockerHostname = require('./dockerHostname');
 var describeDatabase = require('./describeDatabase');
 var sworm = require('..');
 
@@ -7,7 +6,7 @@ function config(name) {
     driver: "mysql",
     config: process.env.TRAVIS
       ? { user: "travis", password: "", database: name }
-      : { host: dockerHostname, user: "root", password: "password", database: name }
+      : { host: 'localhost', user: "root", password: "password", database: name }
   };
 }
 

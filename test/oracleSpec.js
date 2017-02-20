@@ -1,5 +1,4 @@
 if (!process.env.TRAVIS) {
-  var dockerHostname = require('./dockerHostname');
   var describeDatabase = require('./describeDatabase');
   var sworm = require('..');
   var oracledb = require('oracledb');
@@ -104,7 +103,7 @@ if (!process.env.TRAVIS) {
   function urlConfig(options) {
     return {
       driver: 'oracle',
-      url: addUrlParams('oracle://system:oracle@' + dockerHostname + ':1521/XE', options)
+      url: addUrlParams('oracle://system:oracle@localhost:1521/XE', options)
     };
   }
 
@@ -114,7 +113,7 @@ if (!process.env.TRAVIS) {
       config: _.extend({
         user: "system",
         password: "oracle",
-        connectString: dockerHostname + ':1521/XE'
+        connectString: 'localhost:1521/XE'
       }, options)
     };
   }
