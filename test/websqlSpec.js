@@ -37,7 +37,9 @@ var database = {
     return records;
   },
 
-  driverModuleName: "websql"
+  driverModuleName: "websql",
+
+  transactions: false
 };
 
 var config = {
@@ -46,27 +48,6 @@ var config = {
 };
 
 describeDatabase("websql", config, database, function () {
-  describe('options', function () {
-    it('can pass options to query', function () {
-      var db = sworm.db(config);
-
-      return db.query('drop table if exists blah').then(function () {
-        return db.query(
-          "create table blah ( x integer not null, y integer not null ); " +
-          "insert into blah (x, y) values (1, 2); " +
-          "insert into blah (x, y) values (2, 3); "
-        , {}, {multiline: true});
-      }).then(function () {
-        return db.query('select * from blah').then(function (rows) {
-          expect(rows).to.eql([
-            { x: 1, y: 2 },
-            { x: 2, y: 3 } 
-          ]);
-        });
-      });
-    });
-  });
-
   describe('connection', function () {
     it('can accept a file: URL', function () {
       var db = sworm.db('file://' + config.config.filename + '?asdf=asdf');

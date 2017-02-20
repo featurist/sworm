@@ -23,37 +23,20 @@ module.exports = function() {
         });
       }
 
-      if (options.statement || options.insert) {
-        return new Promise(function (fulfil, reject) {
-          debug(query, paramList);
-          console.log(query, paramList);
-          self.connection.transaction(function(tx) {
-            tx.executeSql(query, paramList, function(tx, result){
-              fulfil({id: result.insertId, changes: this.changes});
-            }, function(tx, error){
-              console.log('err', error)
-              reject(error)
-            });
-          });
-        });
-      } else if (options.exec || options.multiline) {
-        return promisify(function (cb) {
-          debug(query, paramList);
-          self.connection.exec(query, [], cb);
-        });
-      } else {
-        return new Promise(function(fulfil, reject) {
-          debug(query, paramList);
-          self.connection.transaction(function(tx) {
-            tx.executeSql(query, paramList, function(tx, result){
+      return new Promise(function (fulfil, reject) {
+        debug(query, paramList);
+        self.connection.transaction(function(tx) {
+          tx.executeSql(query, paramList, function(tx, result){
+            if (options.statement || options.insert) {
+              fulfil({id: result.insertId, changes: result.rowsAffected});
+            } else {
               fulfil(result.rows._array)
-            }, function(tx, error){
-              console.log('err', error)
-              reject(error)
-            });
+            }
+          }, function(tx, error){
+            reject(error)
           });
         });
-      }
+      });
     },
 
     insert: function(query, params, options) {
@@ -70,6 +53,22 @@ module.exports = function() {
 
     close: function() {
       return Promise.resolve()
+    },
+
+    noTransactions: function () {
+      throw new Error('transactions are not supported with websql')
+    },
+
+    begin: function () {
+      this.noTransactions()
+    },
+
+    commit: function () {
+      this.noTransactions()
+    },
+
+    rollback: function () {
+      this.noTransactions()
     }
   };
 };

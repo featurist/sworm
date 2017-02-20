@@ -193,38 +193,67 @@ module.exports = function(name, config, database, otherTests) {
           });
         });
 
-        describe('transactions', function () {
-          beforeEach(function () {
-            if (database.setAutoCommit) {
-              database.setAutoCommit(false);
-            }
-          });
+        if (!database.hasOwnProperty('transactions') || database.transactions != false) {
+          describe('transactions', function () {
+            beforeEach(function () {
+              if (database.setAutoCommit) {
+                database.setAutoCommit(false);
+              }
+            });
 
-          afterEach(function () {
-            if (database.setAutoCommit) {
-              database.setAutoCommit(true);
-            }
-          });
+            afterEach(function () {
+              if (database.setAutoCommit) {
+                database.setAutoCommit(true);
+              }
+            });
 
-          describe('rollback', function () {
-            describe('explicit', function () {
-              it('rolls back when rollback is called', function () {
-                return db.begin().then(function () {
-                  var bob = person({ name: 'bob' });
-                  return bob.save().then(function () {
-                    return db.query('select * from people');
-                  }).then(function (people) {
-                    expect(people).to.eql([
-                      {
-                        id: bob.id,
-                        name: 'bob',
-                        address_id: null,
-                        photo: null
-                      }
-                    ]);
-                  }).then(function() {
-                    return db.rollback();
-                  }).then(function() {
+            describe('rollback', function () {
+              describe('explicit', function () {
+                it('rolls back when rollback is called', function () {
+                  return db.begin().then(function () {
+                    var bob = person({ name: 'bob' });
+                    return bob.save().then(function () {
+                      return db.query('select * from people');
+                    }).then(function (people) {
+                      expect(people).to.eql([
+                        {
+                          id: bob.id,
+                          name: 'bob',
+                          address_id: null,
+                          photo: null
+                        }
+                      ]);
+                    }).then(function() {
+                      return db.rollback();
+                    }).then(function() {
+                      return db.query('select * from people');
+                    }).then(function(people) {
+                      expect(people).to.eql([
+                      ]);
+                    });
+                  });
+                });
+              });
+
+              describe('scoped', function () {
+                it('rolls back if the transaction scope throws an exception', function () {
+                  return expect(db.transaction(function () {
+                    var bob = person({ name: 'bob' });
+                    return bob.save().then(function() {
+                      return db.query('select * from people');
+                    }).then(function(people) {
+                      expect(people).to.eql([
+                        {
+                          id: bob.id,
+                          name: 'bob',
+                          address_id: null,
+                          photo: null
+                        }
+                      ]);
+
+                      throw new Error('uh oh');
+                    });
+                  })).to.be.rejectedWith('uh oh').then(function() {
                     return db.query('select * from people');
                   }).then(function(people) {
                     expect(people).to.eql([
@@ -234,11 +263,59 @@ module.exports = function(name, config, database, otherTests) {
               });
             });
 
-            describe('scoped', function () {
-              it('rolls back if the transaction scope throws an exception', function () {
-                return expect(db.transaction(function () {
-                  var bob = person({ name: 'bob' });
-                  return bob.save().then(function() {
+            describe('commit', function () {
+              describe('explicit', function () {
+                it('makes changes after commit is called', function () {
+                  return db.begin().then(function () {
+                    var bob = person({ name: 'bob' });
+                    return bob.save().then(function() {
+                      return db.query('select * from people');
+                    }).then(function(people) {
+                      expect(people).to.eql([
+                        {
+                          id: bob.id,
+                          name: 'bob',
+                          address_id: null,
+                          photo: null
+                        }
+                      ]);
+                    }).then(function() {
+                      return db.commit();
+                    }).then(function() {
+                      return db.query('select * from people');
+                    }).then(function(people) {
+                      expect(people).to.eql([
+                        {
+                          id: bob.id,
+                          name: 'bob',
+                          address_id: null,
+                          photo: null
+                        }
+                      ]);
+                    });
+                  });
+                });
+              });
+
+              describe('scoped', function () {
+                it('makes changes after commit is called', function () {
+                  var bob;
+
+                  return db.transaction(function () {
+                    bob = person({ name: 'bob' });
+                    return bob.save().then(function() {
+                      return db.query('select * from people');
+                    }).then(function(people) {
+                      expect(people).to.eql([
+                        {
+                          id: bob.id,
+                          name: 'bob',
+                          address_id: null,
+                          photo: null
+                        }
+                      ]);
+                    });
+                  }).then(function() {
                     return db.query('select * from people');
                   }).then(function(people) {
                     expect(people).to.eql([
@@ -249,87 +326,20 @@ module.exports = function(name, config, database, otherTests) {
                         photo: null
                       }
                     ]);
-
-                    throw new Error('uh oh');
                   });
-                })).to.be.rejectedWith('uh oh').then(function() {
-                  return db.query('select * from people');
-                }).then(function(people) {
-                  expect(people).to.eql([
-                  ]);
                 });
               });
             });
           });
-
-          describe('commit', function () {
-            describe('explicit', function () {
-              it('makes changes after commit is called', function () {
-                return db.begin().then(function () {
-                  var bob = person({ name: 'bob' });
-                  return bob.save().then(function() {
-                    return db.query('select * from people');
-                  }).then(function(people) {
-                    expect(people).to.eql([
-                      {
-                        id: bob.id,
-                        name: 'bob',
-                        address_id: null,
-                        photo: null
-                      }
-                    ]);
-                  }).then(function() {
-                    return db.commit();
-                  }).then(function() {
-                    return db.query('select * from people');
-                  }).then(function(people) {
-                    expect(people).to.eql([
-                      {
-                        id: bob.id,
-                        name: 'bob',
-                        address_id: null,
-                        photo: null
-                      }
-                    ]);
-                  });
-                });
-              });
-            });
-
-            describe('scoped', function () {
-              it('makes changes after commit is called', function () {
-                var bob;
-
-                return db.transaction(function () {
-                  bob = person({ name: 'bob' });
-                  return bob.save().then(function() {
-                    return db.query('select * from people');
-                  }).then(function(people) {
-                    expect(people).to.eql([
-                      {
-                        id: bob.id,
-                        name: 'bob',
-                        address_id: null,
-                        photo: null
-                      }
-                    ]);
-                  });
-                }).then(function() {
-                  return db.query('select * from people');
-                }).then(function(people) {
-                  expect(people).to.eql([
-                    {
-                      id: bob.id,
-                      name: 'bob',
-                      address_id: null,
-                      photo: null
-                    }
-                  ]);
-                });
-              });
-            });
-          });
-        });
+        } else {
+          describe('no transactions', function () {
+            it('throws when asked to create a new transaction', function () {
+              expect(function () {
+                db.begin()
+              }).to.throw('transactions are not supported')
+            })
+          })
+        }
 
         describe("concurrency", function() {
           it("can insert multiple rows, maintaining correct IDs", function() {
