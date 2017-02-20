@@ -50,7 +50,7 @@ module.exports = function(name, config, database, otherTests) {
 
         function clearTables() {
           return Promise.all(tables.map(function (table) {
-            return db.query('delete from ' + table);
+            return db.statement('delete from ' + table);
           }));
         }
 
@@ -1196,7 +1196,7 @@ module.exports = function(name, config, database, otherTests) {
 
       describe("connection", function() {
         function clear(db) {
-          return db.query('delete from people');
+          return db.statement('delete from people');
         }
 
         it("can define models before connecting to database", function() {

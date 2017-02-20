@@ -44,9 +44,35 @@ module.exports = function () {
     execute: function (query, params, options) {
       var self = this;
       debug(query, params);
-      return this.outstandingQueries.execute(promisify(function (cb) {
-        self.connection.execute(query, params || {}, options, cb)
-      }));
+
+      var promise = options.statement || options.insert
+        ? promisify(function (cb) {
+          self.connection.execute(query, params || {}, options, cb)
+        })
+        : this.queryStream(query, params || {}, options)
+
+      return this.outstandingQueries.execute(promise);
+    },
+
+    queryStream: function(query, params, options) {
+      var self = this
+
+      return new Promise(function(resolve, reject) {
+        var rows = []
+        var metadata
+        var stream = self.connection.queryStream(query, params, options)
+
+        stream.on('data', function (row) {
+          rows.push(row)
+        })
+        stream.on('error', reject)
+        stream.on('end', function () {
+          resolve({metaData: metadata, rows: rows})
+        })
+        stream.on('metadata', function (md) {
+          metadata = md
+        })
+      })
     },
 
     insert: function(query, params, options) {

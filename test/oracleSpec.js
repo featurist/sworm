@@ -15,7 +15,7 @@ if (!process.env.TRAVIS) {
     createTables: function(db, tables) {
       function createTable(name, id, sql, noAutoId) {
         tables.push(name);
-        return db.query(
+        return db.statement(
           "BEGIN " +
           "  EXECUTE IMMEDIATE 'DROP TABLE " + name + "'; " +
           "EXCEPTION WHEN OTHERS THEN " +
@@ -24,7 +24,7 @@ if (!process.env.TRAVIS) {
           "  END IF; " +
           "END;"
         ).then(function() {
-          return db.query(
+          return db.statement(
             "BEGIN " +
             "  EXECUTE IMMEDIATE 'DROP SEQUENCE " + name + "_seq'; " +
             "EXCEPTION WHEN OTHERS THEN " +
@@ -34,12 +34,12 @@ if (!process.env.TRAVIS) {
             "END;"
           ).then(function() {
             if (!noAutoId) {
-              return db.query('CREATE SEQUENCE ' + name + '_seq');
+              return db.statement('CREATE SEQUENCE ' + name + '_seq');
             }
           }).then(function() {
-            return db.query(sql).then(function() {
+            return db.statement(sql).then(function() {
               if (!noAutoId) {
-                return db.query(
+                return db.statement(
                   "create or replace trigger " + name + "_id " +
                   "  before insert on " + name + " " +
                   "  for each row " +
