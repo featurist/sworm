@@ -16,7 +16,7 @@ module.exports = function () {
     outstandingQueries: outstandingQueries(),
 
     query: function (query, params, options) {
-      var resultsPromise = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options));
+      var resultsPromise = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options))
 
       if (options.statement || options.insert) {
         return resultsPromise.then(function (results) {
@@ -72,6 +72,12 @@ module.exports = function () {
         stream.on('metadata', function (md) {
           metadata = md
         })
+      }).catch(function (e) {
+        if (/NJS-019/.test(e.message)) {
+          throw new Error('oracle: you cannot pass an SQL statement to db.query(), please use db.statement()')
+        } else {
+          throw e
+        }
       })
     },
 

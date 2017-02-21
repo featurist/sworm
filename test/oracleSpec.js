@@ -134,6 +134,24 @@ if (!process.env.TRAVIS) {
       });
     });
 
+    describe('passing statements to query()', function () {
+      var db
+
+      beforeEach(function () {
+        db = sworm.db(config());
+      })
+
+      afterEach(function () {
+        if (db) {
+          return db.close()
+        }
+      });
+
+      it('throws error when passing a statement to query()', function () {
+        return expect(db.query('insert into people (name) values (@name)', {name: 'bob'})).to.be.rejectedWith('use db.statement()')
+      })
+    })
+
     describe('connection pooling', function () {
       var db;
       var db1;
