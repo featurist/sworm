@@ -30,7 +30,11 @@ module.exports = function() {
             if (options.statement || options.insert) {
               fulfil({id: result.insertId, changes: result.rowsAffected});
             } else {
-              fulfil(result.rows._array)
+              var results = []
+              for (var i = 0; i<result.rows.length; i++) {
+                results.push(result.rows.item(i))
+              }
+              fulfil(results)
             }
           }, function(tx, error){
             reject(error)
