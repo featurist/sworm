@@ -5,8 +5,6 @@ var paramRegex = require('./paramRegex')
 var urlUtils = require('url')
 
 module.exports = function() {
-  var openDatabase = optionalRequire('websql');
-
   return {
     query: function(query, params, options) {
       var self = this;
@@ -48,6 +46,7 @@ module.exports = function() {
     },
 
     connect: function(options) {
+      var openDatabase = options.openDatabase || optionalRequire('websql')
       var config = parseConfig(options)
       var defaultSize = 5 * 1024 * 1024;
       this.connection = openDatabase(config.filename, '1.0', config.description, config.size || defaultSize)

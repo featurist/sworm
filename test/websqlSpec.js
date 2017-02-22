@@ -58,5 +58,28 @@ describeDatabase("websql", config, database, function () {
       var db = sworm.db(config.config.filename);
       return db.query('select * from people')
     });
+
+    context('openDatabase option', function () {
+      it('can provide a custom openDatabase implementation that doesnt work', function () {
+        var db = sworm.db({
+          driver: 'websql',
+          config: {},
+          openDatabase: function () {
+            throw new Error('openDatabase called')
+          }})
+
+        expect(db.connect.bind(db)).to.throw('openDatabase called')
+      })
+
+      it('can provide a working custom openDatabase implementation', function () {
+        var db = sworm.db({
+          driver: 'websql',
+          config: config.config,
+          openDatabase: require('websql')
+        })
+
+        return db.query('select * from people')
+      })
+    })
   });
 });
