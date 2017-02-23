@@ -39,6 +39,7 @@ module.exports = function(name, config, database, otherTests) {
         var db;
         var tables = [];
         var person;
+        var personWeirdId
         var address;
         var personAddress;
         var statements;
@@ -93,6 +94,14 @@ module.exports = function(name, config, database, otherTests) {
             personAddress = db.model({
               table: "people_addresses",
               id: [ "address_id", "person_id" ]
+            });
+
+            personWeirdId = db.model({
+              table: "people_weird_id",
+              id: "weird_id",
+              foreignKeyFor: function(x) {
+                return x + "_weird_id";
+              }
             });
           });
         });
@@ -175,10 +184,6 @@ module.exports = function(name, config, database, otherTests) {
         });
 
         it("can insert emtpy rows", function() {
-          var personWeirdId = db.model({
-            table: "people_weird_id",
-            id: "weird_id"
-          });
           var p = personWeirdId({});
           return p.save().then(function() {
             expect(p.weird_id).to.exist;
@@ -462,10 +467,6 @@ module.exports = function(name, config, database, otherTests) {
 
         describe("custom id columns", function() {
           it("can insert with weird_id", function() {
-            var personWeirdId = db.model({
-              table: "people_weird_id",
-              id: "weird_id"
-            });
             var p = personWeirdId({
               name: "bob"
             });
@@ -848,14 +849,6 @@ module.exports = function(name, config, database, otherTests) {
 
           describe("custom foreign keys", function() {
             it("can save a many to one relationship with a custom foreign key", function() {
-              var personWeirdId = db.model({
-                table: "people_weird_id",
-                id: "weird_id",
-                foreignKeyFor: function(x) {
-                  return x + "_weird_id";
-                }
-              });
-
               var bob = personWeirdId({
                 name: "bob",
                 address: address({
@@ -1141,6 +1134,21 @@ module.exports = function(name, config, database, otherTests) {
               ])
             })
           });
+
+          it('saves one to manies first', function () {
+            var bob = person({name: 'bob', address: address({address: 'lolo st'})})
+
+            return bob.insert().then(function () {
+              return db.query('select * from addresses')
+            }).then(function (rows) {
+              expect(rows).to.eql([
+                {
+                  address: 'lolo st',
+                  id: bob.address_id
+                }
+              ])
+            })
+          });
         });
 
         describe('update', function () {
@@ -1160,15 +1168,32 @@ module.exports = function(name, config, database, otherTests) {
             })
           });
 
+          it('saves one to manies first', function () {
+            var bob = person({name: 'bob'})
+
+            return bob.save().then(function () {
+              var bob2 = person({name: 'bob2', id: bob.id, address: address({address: 'lolo st'})})
+
+              return bob2.update().then(function () {
+                return db.query('select * from addresses')
+              }).then(function (rows) {
+                expect(rows).to.eql([
+                  {
+                    address: 'lolo st',
+                    id: bob2.address_id
+                  }
+                ])
+              })
+            })
+          });
+
           it('cannot update without id set', function () {
             var bob = person({name: 'bob'})
 
             return bob.save().then(function () {
               var bob2 = person({name: 'bob2'})
 
-              return expect(function () {
-                bob2.update()
-              }).to.throw('entity must have id to be updated')
+              return expect(bob2.update()).to.eventually.be.rejectedWith('entity must have id to be updated')
             })
           });
 
@@ -1185,13 +1210,104 @@ module.exports = function(name, config, database, otherTests) {
         });
 
         describe('upsert', function () {
-          it('inserts when there is no id', function () {
-            var bob = person({name: 'bob'})
+          var bob
 
-            return bob.save().then(function () {
+          beforeEach(function () {
+            bob = person({name: 'bob'})
+            return bob.save()
+          })
+
+          it('inserts when there is no id', function () {
+            var bob2 = person({name: 'bob2'})
+
+            return bob2.upsert().then(function () {
+              return db.query('select * from people')
+            }).then(function (rows) {
+              expect(rows.map(function (r) { return r.name })).to.eql([
+                'bob',
+                'bob2'
+              ])
+            })
+          });
+
+          it('updates when there is an id', function () {
+            var bob2 = person({name: 'bob2', id: bob.id})
+
+            return bob2.upsert().then(function () {
+              return db.query('select * from people')
+            }).then(function (rows) {
+              expect(rows.map(function (r) { return r.name })).to.eql([
+                'bob2'
+              ])
             })
           });
         });
+
+        describe('identity', function () {
+          describe('non-compound keys', function () {
+            context('with ids', function () {
+              it('returns identity', function () {
+                var bob = personWeirdId({name: 'bob', weird_id: 5})
+                expect(bob.identity()).to.eql(5)
+              })
+
+              it('has identity', function () {
+                var bob = personWeirdId({name: 'bob', weird_id: 5})
+                expect(bob.hasIdentity()).to.be.true
+              })
+            })
+
+            context('without ids', function () {
+              it('returns undefined', function () {
+                var bob = personWeirdId({name: 'bob'})
+                expect(bob.identity()).to.eql(undefined)
+              })
+
+              it('does not have identity', function () {
+                var bob = personWeirdId({name: 'bob'})
+                expect(bob.hasIdentity()).to.be.false
+              })
+            })
+          })
+
+          describe('compound keys', function () {
+            context('with ids', function () {
+              it('returns identity', function () {
+                var bobAddress = personAddress({address_id: 1, person_id: 2})
+                expect(bobAddress.identity()).to.eql([1, 2])
+              })
+
+              it('has identity', function () {
+                var bobAddress = personAddress({address_id: 1, person_id: 2})
+                expect(bobAddress.hasIdentity()).to.be.true
+              })
+            })
+
+            context('without ids', function () {
+              it('returns undefined', function () {
+                var bobAddress = personAddress({})
+                expect(bobAddress.identity()).to.eql(undefined)
+              })
+
+              it('does not have identity', function () {
+                var bobAddress = personAddress({})
+                expect(bobAddress.hasIdentity()).to.be.false
+              })
+            })
+
+            context('with half ids', function () {
+              it('returns undefined', function () {
+                var bobAddress = personAddress({address_id: 1})
+                expect(bobAddress.identity()).to.eql(undefined)
+              })
+
+              it('does not have identity', function () {
+                var bobAddress = personAddress({})
+                expect(bobAddress.hasIdentity()).to.be.false
+              })
+            })
+          })
+        })
       });
 
       describe("connection", function() {
