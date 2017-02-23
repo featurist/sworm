@@ -1172,7 +1172,7 @@ module.exports = function(name, config, database, otherTests) {
             })
           });
 
-          it('cannot update without id set', function () {
+          it('throws if no entity is found to update', function () {
             var bob = person({name: 'bob'})
 
             return bob.save().then(function () {

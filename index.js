@@ -100,7 +100,7 @@ var rowBase = function() {
       }).join(' and ');
     } else {
       if (obj.identity() === undefined) {
-        throw new Error('entity must have ' + obj._meta.id + ' to be updated');
+        throw new Error(obj._meta.table + ' entity must have ' + obj._meta.id + ' to be updated');
       }
 
       keys.push(obj._meta.id);
@@ -228,9 +228,7 @@ var rowBase = function() {
       }));
 
       if (waitForOneToManys) {
-        return self._saving.then(function () {
-          return Promise.all(oneToManyPromises);
-        });
+        return Promise.all(oneToManyPromises.concat([self._saving]))
       } else {
         return self._saving;
       }
