@@ -1,10 +1,5 @@
 var crypto = require("crypto");
 var _ = require("underscore");
-var mssqlDriver = require("./mssqlDriver");
-var pgDriver = require("./pgDriver");
-var mysqlDriver = require("./mysqlDriver");
-var oracleDriver = require("./oracleDriver");
-var sqliteDriver = require("./sqliteDriver");
 var debug = require("debug")("sworm");
 var debugResults = require("debug")("sworm:results");
 var redactConfig = require('./redactConfig');
@@ -454,13 +449,25 @@ exports.db = function(config) {
 
       debug('connecting to', redactConfig(this.config));
 
-      var driver = {
-          mssql: mssqlDriver,
-          pg: pgDriver,
-          mysql: mysqlDriver,
-          oracle: oracleDriver,
-          sqlite: sqliteDriver
+      var factory = {
+        mssql: function() {
+            return require("./mssqlDriver");
+        },
+        pg: function() {
+            return require("./pgDriver");
+        },
+        mysql: function() {
+            return require("./mysqlDriver");
+        },
+        oracle: function() {
+            return require("./oracleDriver");
+        },
+        sqlite: function() {
+            return require("./sqliteDriver");
+        }
       }[this.config.driver];
+
+      var driver = (factory || function() {}).call();
 
       if (!driver) {
           throw new Error("no such driver: `" + this.config.driver + "'");
