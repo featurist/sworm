@@ -16,7 +16,7 @@ module.exports = function () {
     outstandingQueries: outstandingQueries(),
 
     query: function (query, params, options) {
-      var resultsPromise = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options));
+      var resultsPromise = this.execute(replaceParameters(query), params, _.extend({outFormat: oracledb.ARRAY}, options))
 
       if (options.statement || options.insert) {
         return resultsPromise.then(function (results) {
@@ -44,9 +44,52 @@ module.exports = function () {
     execute: function (query, params, options) {
       var self = this;
       debug(query, params);
-      return this.outstandingQueries.execute(promisify(function (cb) {
-        self.connection.execute(query, params || {}, options, cb)
-      }));
+
+      var promise = options.statement || options.insert
+        ? promisify(function (cb) {
+          self.connection.execute(query, params || {}, options, cb)
+        })
+        : this.queryResultSet(query, params || {}, options)
+
+      return this.outstandingQueries.execute(promise);
+    },
+
+    queryResultSet: function(query, params, options) {
+      return this.connection.execute(query, params, _.extend(options, {resultSet: true})).then(function (results) {
+        var resultSet = results.resultSet
+        var numberOfRows = oracledb.maxRows || 100
+
+        function fetchRows(allRows) {
+          return resultSet.getRows(numberOfRows).then(function (rows) {
+            allRows.push(rows)
+
+            if (rows.length < numberOfRows) {
+              return resultSet.close().then(function () {
+                return allRows
+              })
+            } else {
+              return fetchRows(allRows)
+            }
+          })
+        }
+
+        return fetchRows([]).then(function (rows) {
+          return {
+            metaData: results.metaData,
+            rows: _.flatten(rows, true)
+          }
+        }, function (error) {
+          return resultSet.close().then(function () {
+            throw error
+          })
+        })
+      }, function (error) {
+        if (/NJS-019/.test(error.message)) {
+          throw new Error('oracle: you cannot pass an SQL statement to db.query(), please use db.statement()')
+        } else {
+          throw error
+        }
+      })
     },
 
     insert: function(query, params, options) {

@@ -16,7 +16,7 @@
     "chai-as-promised": "5.3.0",
     "es6-promise": "3.2.1",
     "fs-promise": "0.5.0",
-    "mocha": "2.5.3",
+    "mocha": "3.2.0",
     "mssql": "3.3.0",
     "mysql": "2.11.1",
     "pg": "6.1.0",
