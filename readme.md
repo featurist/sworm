@@ -247,6 +247,8 @@ sworm.db(url)
   See: [getConnection()](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#-332-getconnection)
   For `options` see [Oracledb Properties](https://github.com/oracle/node-oracledb/blob/master/doc/api.md#oracledbproperties)
 
+  The driver fetches `maxRows` rows at a time, defaulting to 100. You may want to adjust this value if you expect large result sets, higher values can be faster but use more memory.
+
   The driver will use connection pooling if you pass `pool: true`.
 
   By default the driver is set to `autoCommit = true`, you can pass `options: { autoCommit: false}` to turn this off again.
