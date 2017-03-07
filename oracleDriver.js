@@ -49,34 +49,45 @@ module.exports = function () {
         ? promisify(function (cb) {
           self.connection.execute(query, params || {}, options, cb)
         })
-        : this.queryStream(query, params || {}, options)
+        : this.queryResultSet(query, params || {}, options)
 
       return this.outstandingQueries.execute(promise);
     },
 
-    queryStream: function(query, params, options) {
-      var self = this
+    queryResultSet: function(query, params, options) {
+      return this.connection.execute(query, params, _.extend(options, {resultSet: true})).then(function (results) {
+        var resultSet = results.resultSet
+        var numberOfRows = oracledb.maxRows || 100
 
-      return new Promise(function(resolve, reject) {
-        var rows = []
-        var metadata
-        var stream = self.connection.queryStream(query, params, options)
+        function fetchRows(allRows) {
+          return resultSet.getRows(numberOfRows).then(function (rows) {
+            allRows.push(rows)
 
-        stream.on('data', function (row) {
-          rows.push(row)
+            if (rows.length < numberOfRows) {
+              return resultSet.close().then(function () {
+                return allRows
+              })
+            } else {
+              return fetchRows(allRows)
+            }
+          })
+        }
+
+        return fetchRows([]).then(function (rows) {
+          return {
+            metaData: results.metaData,
+            rows: _.flatten(rows, true)
+          }
+        }, function (error) {
+          return resultSet.close().then(function () {
+            throw error
+          })
         })
-        stream.on('error', reject)
-        stream.on('end', function () {
-          resolve({metaData: metadata, rows: rows})
-        })
-        stream.on('metadata', function (md) {
-          metadata = md
-        })
-      }).catch(function (e) {
-        if (/NJS-019/.test(e.message)) {
+      }, function (error) {
+        if (/NJS-019/.test(error.message)) {
           throw new Error('oracle: you cannot pass an SQL statement to db.query(), please use db.statement()')
         } else {
-          throw e
+          throw error
         }
       })
     },
