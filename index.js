@@ -5,6 +5,7 @@ var pgDriver = require("./pgDriver");
 var mysqlDriver = require("./mysqlDriver");
 var oracleDriver = require("./oracleDriver");
 var sqliteDriver = require("./sqliteDriver");
+var websqlDriver = require("./websqlDriver");
 var debug = require("debug")("sworm");
 var debugResults = require("debug")("sworm:results");
 var redactConfig = require('./redactConfig');
@@ -459,7 +460,8 @@ exports.db = function(config) {
           pg: pgDriver,
           mysql: mysqlDriver,
           oracle: oracleDriver,
-          sqlite: sqliteDriver
+          sqlite: sqliteDriver,
+          websql: websqlDriver
       }[this.config.driver];
 
       if (!driver) {
@@ -568,8 +570,10 @@ exports.escape = function(value) {
 }
 
 function configFromUrl(url) {
+  var isBrowser = typeof window !== 'undefined'
+
   var parsedUrl = urlUtils.parse(url)
-  var protocol = parsedUrl.protocol? parsedUrl.protocol.replace(/:$/, ''): 'sqlite'
+  var protocol = parsedUrl.protocol? parsedUrl.protocol.replace(/:$/, ''): (isBrowser? 'websql': 'sqlite')
   var driver = {
     postgres: 'pg',
     file: 'sqlite'

@@ -7,6 +7,7 @@ A very lightweight **write only** Node.js ORM, with support for:
 * MySQL
 * Oracle DB
 * Sqlite 3
+* Browser Web SQL
 
 ## NPM
 
@@ -19,6 +20,8 @@ Then install a database driver, one of:
     npm install mysql
     npm install oracledb
     npm install sqlite3
+
+There's no need to install a driver for Web SQL, sworm will pick it up from the `window` object.
 
 See [sworm](https://www.npmjs.org/package/sworm) in NPM.
 
@@ -158,7 +161,7 @@ sworm.db(url)
 
   * `url`, see urls for databases in respective section below
 
-  * `options.driver`, one of `'mssql'`, `'mysql'`, `'pg'`, `'oracle'` or `'sqlite'`.
+  * `options.driver`, one of `'mssql'`, `'mysql'`, `'pg'`, `'oracle'`, `'sqlite'` or `'websql'`.
   * `options.config` see configuration for databases in respective section below
 
   * `url` a connection URL, the following are supported
@@ -301,6 +304,25 @@ sworm.db(url)
   }
   ```
 
+* **websql**
+
+  URL: `websql:///db-name` or `db-name`
+
+  ```js
+  {
+    driver: 'websql',
+    config: {
+      name: 'db-name',
+
+      // the `openDatabase` function to connect to the DB, defaulting to `window.openDatabase`
+      openDatabase: window.openDatabase,
+
+      // dababase size, defaulting to 5M
+      size: 5 * 1024 * 1024
+    }
+  }
+  ```
+
 ### Close
 
 Close the connection after use:
@@ -326,6 +348,7 @@ There are various schemes you can use:
 * `sworm:pg` exact query passed to postgres
 * `sworm:oracle` exact query passed to oracle
 * `sworm:sqlite` exact query passed to sqlite3
+* `sworm:websql` exact query passed to websql
 
 ## Models
 
