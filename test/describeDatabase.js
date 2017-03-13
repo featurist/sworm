@@ -1067,7 +1067,7 @@ module.exports = function(name, config, database, otherTests) {
                       }
                     ]);
 
-                    return db.query("select * from addresses").then(function(addresses) {
+                    return db.query('select * from addresses order by address').then(function(addresses) {
                       return expect(database.clean(addresses)).to.eql([
                         {
                           id: essert.id,
