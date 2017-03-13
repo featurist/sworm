@@ -1,5 +1,3 @@
-var promisify = require('./promisify');
-var optionalRequire = require("./optionalRequire");
 var debug = require('debug')('sworm:websql');
 var paramRegex = require('./paramRegex')
 var urlUtils = require('url')
@@ -26,7 +24,17 @@ module.exports = function() {
         self.connection.transaction(function(tx) {
           tx.executeSql(query, paramList, function(tx, result){
             if (options.statement || options.insert) {
-              fulfil({id: result.insertId, changes: result.rowsAffected});
+              var r = {}
+
+              if (options.statement) {
+                r.changes = result.rowsAffected
+              }
+
+              if (options.insert) {
+                r.id = result.insertId
+              }
+
+              fulfil(r)
             } else {
               var results = []
               for (var i = 0; i<result.rows.length; i++) {
@@ -46,10 +54,10 @@ module.exports = function() {
     },
 
     connect: function(options) {
-      var openDatabase = options.openDatabase || optionalRequire('websql')
+      var openDatabase = (options.config && options.config.openDatabase) || window.openDatabase
       var config = parseConfig(options)
       var defaultSize = 5 * 1024 * 1024;
-      this.connection = openDatabase(config.filename, '1.0', config.description, config.size || defaultSize)
+      this.connection = openDatabase(config.name, '1.0', config.description, config.size || defaultSize)
 
       return Promise.resolve()
     },
@@ -82,11 +90,11 @@ function parseConfig(options) {
 
     if (url.protocol) {
       return {
-        filename: url.pathname
+        name: url.pathname.replace(/^\//, '')
       }
     } else {
       return {
-        filename: options.url
+        name: options.url
       }
     }
   } else {

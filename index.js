@@ -549,8 +549,10 @@ exports.escape = function(value) {
 }
 
 function configFromUrl(url) {
+  var isBrowser = typeof window !== 'undefined'
+
   var parsedUrl = urlUtils.parse(url)
-  var protocol = parsedUrl.protocol? parsedUrl.protocol.replace(/:$/, ''): 'sqlite'
+  var protocol = parsedUrl.protocol? parsedUrl.protocol.replace(/:$/, ''): (isBrowser? 'websql': 'sqlite')
   var driver = {
     postgres: 'pg',
     file: 'sqlite'

@@ -14,17 +14,18 @@
   "devDependencies": {
     "chai": "3.5.0",
     "chai-as-promised": "5.3.0",
+    "electron": "1.6.2",
+    "electron-mocha": "3.3.0",
     "es6-promise": "3.2.1",
     "fs-promise": "0.5.0",
     "mocha": "2.5.3",
     "mssql": "3.3.0",
     "mysql": "2.11.1",
     "pg": "6.1.0",
-    "sqlite3": "3.1.8",
-    "websql": "0.4.4"
+    "sqlite3": "3.1.8"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha && electron-mocha --renderer test/browser"
   },
   "repository": {
     "type": "git",

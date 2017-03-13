@@ -1,6 +1,6 @@
-var describeDatabase = require('./describeDatabase');
-var expect = require('chai').expect;
-var sworm = require('..');
+var describeDatabase = require('../describeDatabase');
+var sworm = require('../..')
+var expect = require('chai').expect
 
 var database = {
   createTables: function(db, tables) {
@@ -39,47 +39,47 @@ var database = {
 
   driverModuleName: "websql",
 
-  transactions: false
+  transactions: false,
+
+  noModule: true
 };
 
 var config = {
   driver: "websql",
-  config: { filename: __dirname + "/test.db" }
+  config: {
+    name: 'test'
+  }
 };
 
 describeDatabase("websql", config, database, function () {
   describe('connection', function () {
-    it('can accept a file: URL', function () {
-      var db = sworm.db('file://' + config.config.filename + '?asdf=asdf');
+    it('can connect with string for DB name', function () {
+      var db = sworm.db('test')
       return db.query('select * from people')
-    });
+    })
 
-    it('can accept a filename', function () {
-      var db = sworm.db(config.config.filename);
+    it('can connect with URL', function () {
+      var db = sworm.db('websql:///test')
       return db.query('select * from people')
-    });
+    })
 
-    context('openDatabase option', function () {
-      it('can provide a custom openDatabase implementation that doesnt work', function () {
-        var db = sworm.db({
-          driver: 'websql',
-          config: {},
-          openDatabase: function () {
-            throw new Error('openDatabase called')
-          }})
+    it('can connect with openDatabase function', function () {
+      var called = false
 
-        expect(db.connect.bind(db)).to.throw('openDatabase called')
+      var db = sworm.db({
+        driver: 'websql',
+        config: {
+          openDatabase: function() {
+            called = true
+            return window.openDatabase.apply(window, arguments)
+          },
+          name: 'test'
+        }
       })
 
-      it('can provide a working custom openDatabase implementation', function () {
-        var db = sworm.db({
-          driver: 'websql',
-          config: config.config,
-          openDatabase: require('websql')
-        })
-
-        return db.query('select * from people')
+      return db.query('select * from people').then(function () {
+        expect(called).to.be.true
       })
     })
-  });
-});
+  })
+})

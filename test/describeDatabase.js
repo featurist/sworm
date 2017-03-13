@@ -10,23 +10,25 @@ require('es6-promise').polyfill();
 
 module.exports = function(name, config, database, otherTests) {
   describe(name, function() {
-    describe("missing modules", function() {
-      var moduleName = __dirname + "/../node_modules/" + database.driverModuleName;
+    if (!database.noModule) {
+      describe("missing modules", function() {
+        var moduleName = __dirname + "/../node_modules/" + database.driverModuleName;
 
-      beforeEach(function() {
-        return fs.rename(moduleName, moduleName + ".missing");
-      });
+        beforeEach(function() {
+          return fs.rename(moduleName, moduleName + ".missing");
+        });
 
-      afterEach(function() {
-        return fs.rename(moduleName + ".missing", moduleName);
-      });
+        afterEach(function() {
+          return fs.rename(moduleName + ".missing", moduleName);
+        });
 
-      it("throws an exception if the driver module is not present", function() {
-        return expect(function() {
-          sworm.db(config).connect();
-        }).to.throw("npm install " + database.driverModuleName);
+        it("throws an exception if the driver module is not present", function() {
+          return expect(function() {
+            sworm.db(config).connect();
+          }).to.throw("npm install " + database.driverModuleName);
+        });
       });
-    });
+    }
 
     context('with a database', function () {
       before(function () {
