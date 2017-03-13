@@ -1,4 +1,6 @@
-var describeDatabase = require('./describeDatabase');
+var describeDatabase = require('./describeDatabase')
+var sworm = require('..')
+var expect = require('chai').expect
 
 var database = {
   createTables: function(db, tables) {
@@ -32,6 +34,10 @@ var database = {
         'CREATE TABLE [dbo].[other_people]([id] [int] IDENTITY(1,1) NOT NULL, [name] [nvarchar](50) NOT NULL)'
       );
     }).then(function () {
+      return createTable("people_uuid",
+        'CREATE TABLE [dbo].[people_uuid](id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY, [name] [nvarchar](50) NULL)'
+      );
+    }).then(function () {
       return db.query(
         "CREATE TRIGGER people_trigger " +
         "  ON people " +
@@ -53,9 +59,37 @@ var database = {
   driverModuleName: "mssql"
 };
 
+var config = {
+  driver: "mssql",
+  config: { user: "user", password: "password", server: "windows", database: "sworm" }
+}
+
 if (!process.env.TRAVIS) {
-  describeDatabase("mssql", {
-    driver: "mssql",
-    config: { user: "user", password: "password", server: "windows", database: "sworm" }
-  }, database);
+  describeDatabase("mssql", config, database, function () {
+    describe('generatedId', function () {
+      it('can insert row with uniqueidentifier and get id correctly', function () {
+        var db = sworm.db(config)
+        var person = db.model({table: 'people_uuid', generatedId: 'output'});
+
+        var bob = person({name: 'bob'})
+        return bob.save().then(function () {
+          return person.query('select * from people_uuid where id = @id', {id: bob.identity()})
+        }).then(function (savedBob) {
+          expect(savedBob[0].id).to.eql(bob.id)
+        })
+      })
+
+      it('can insert empty row with uniqueidentifier and get id correctly', function () {
+        var db = sworm.db(config)
+        var person = db.model({table: 'people_uuid', generatedId: 'output'});
+
+        var bob = person({})
+        return bob.save().then(function () {
+          return person.query('select * from people_uuid where id = @id', {id: bob.identity()})
+        }).then(function (savedBob) {
+          expect(savedBob[0].id).to.eql(bob.id)
+        })
+      })
+    })
+  });
 }

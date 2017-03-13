@@ -57,8 +57,8 @@ module.exports = function() {
       return promisify(function (cb) { self.connection.end(cb); });
     },
 
-    insertEmpty: function(table) {
-      return 'insert into ' + table + ' () values ()';
+    insertEmpty: function(meta) {
+      return 'insert into ' + meta.table + ' () values ()';
     }
   };
 };

@@ -44,12 +44,16 @@ var rowBase = function() {
 
     if (!fields.length) {
       if (obj._meta.db.driver.insertEmpty) {
-        return obj._meta.db.driver.insertEmpty(obj._meta.table, obj._meta.id);
+        return obj._meta.db.driver.insertEmpty(obj._meta);
       } else {
         return 'insert into ' + obj._meta.table + ' default values';
       }
     } else {
-      return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ')';
+      if (obj._meta.db.driver.insertStatement) {
+        return obj._meta.db.driver.insertStatement(obj._meta, fields, values)
+      } else {
+        return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ')';
+      }
     }
   }
 
@@ -90,16 +94,16 @@ var rowBase = function() {
 
     var whereClause;
 
+    if (!obj.hasIdentity()) {
+      throw new Error(obj._meta.table + ' entity must have ' + obj._meta.id + ' to be updated');
+    }
+
     if (obj._meta.compoundKey) {
       keys.push.apply(keys, obj._meta.id);
       whereClause = obj._meta.id.map(function (key) {
         return key + ' = @' + key;
       }).join(' and ');
     } else {
-      if (obj.identity() === undefined) {
-        throw new Error('entity must have ' + obj._meta.id + ' to be updated');
-      }
-
       keys.push(obj._meta.id);
       whereClause = obj._meta.id + ' = @' + obj._meta.id;
     }
@@ -183,7 +187,9 @@ var rowBase = function() {
       this._meta.db.ensureConfigured();
 
       var self = this;
-      var force = options && options.hasOwnProperty('force')? options.force: false;
+      var forceUpdate = options && options.hasOwnProperty('update')? options.update: false;
+      var forceInsert = options && options.hasOwnProperty('insert')? options.insert: false;
+      var force = options && options.hasOwnProperty('force')? options.force: forceInsert || forceUpdate;
 
       var waitForOneToManys;
       var oneToManyPromises;
@@ -199,7 +205,7 @@ var rowBase = function() {
       if (!self._saving) {
         self.setSaving(saveManyToOnes(this, {oneToManyPromises: oneToManyPromises}).then(function () {
           if (self.changed() || force) {
-            var writePromise = self.saved() ? update(self) : insert(self);
+            var writePromise = self.saved() || forceUpdate ? update(self) : insert(self);
 
             return writePromise.then(function () {
               return {
@@ -225,9 +231,7 @@ var rowBase = function() {
       }));
 
       if (waitForOneToManys) {
-        return self._saving.then(function () {
-          return Promise.all(oneToManyPromises);
-        });
+        return Promise.all(oneToManyPromises.concat([self._saving]))
       } else {
         return self._saving;
       }
@@ -238,13 +242,26 @@ var rowBase = function() {
     },
 
     identity: function () {
+      if (this.hasIdentity()) {
+        if (this._meta.compoundKey) {
+          var self = this;
+          return this._meta.id.map(function (id) {
+            return self[id];
+          });
+        } else {
+          return this[this._meta.id];
+        }
+      }
+    },
+
+    hasIdentity: function () {
       if (this._meta.compoundKey) {
         var self = this;
-        return this._meta.id.map(function (id) {
-          return self[id];
+        return this._meta.id.every(function (id) {
+          return self.hasOwnProperty(id) && !!self[id]
         });
       } else {
-        return this[this._meta.id];
+        return this.hasOwnProperty(this._meta.id) && !!this[this._meta.id]
       }
     },
 
@@ -284,15 +301,19 @@ var rowBase = function() {
     },
 
     insert: function () {
-      return insert(this)
+      return this.save({insert: true})
     },
 
     update: function () {
-      return update(this)
+      return this.save({update: true})
     },
 
     upsert: function () {
-      return update(this)
+      if (this.hasIdentity()) {
+        return this.update()
+      } else {
+        return this.insert()
+      }
     }
   };
 }();
