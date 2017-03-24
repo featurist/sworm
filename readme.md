@@ -465,6 +465,22 @@ bob.save().then(function () {
 });
 ```
 
+Alternatively, you can specify the objects the other way around, the address on the outside (see [one-to-many](#one-to-many) for how this works):
+
+```js
+var essert = address({
+  address: "15 Rue d'Essert",
+  person: (address) => [
+    person({
+      name: 'bob',
+      address: address
+    })
+  ]
+})
+
+essert.save()
+```
+
 In SQL:
 
     -------- people ----------
@@ -505,7 +521,7 @@ essert.save().then(function () {
 });
 ```
 
-Alternatively, we can return the people in the address using a function. When the address is saved, the `people` function will be called with the owner address as `this`, then we can set the foreign key for the people. Following the `save()` the results of the function will be saved as an array on the object.
+Alternatively, we can return the people in the address using a function. When the address is saved, the `people` function will be called with the owner address as the first argument, then we can set the foreign key for the people. Following the `save()` the results of the function will be saved as an array on the object.
 
 ```js
 var person = db.model({ table: 'people' });
@@ -513,12 +529,10 @@ var address = db.model({ table: 'addresses' });
 
 var essert = address({
   address: "15 Rue d'Essert",
-  people: function(addr) {
-    return [
-      person({ name: 'bob', address: addr }),
-      person({ name: 'jane', address: addr })
-    ];
-  }
+  people: (addr) => [
+    person({ name: 'bob', address: addr }),
+    person({ name: 'jane', address: addr })
+  ]
 });
 
 essert.save().then(function () {
@@ -549,33 +563,27 @@ In SQL:
 Many-to-many is just a combination of one-to-many and many-to-one:
 
 ```js
+var db = sworm.db('test/test.db')
 var person = db.model({ table: 'people' });
 var personAddress = db.model({ table: 'people_addresses', id: ['address_id', 'person_id'] });
 var address = db.model({ table: 'addresses' });
-
-function personLivesInAddress(person, address) {
-  pa = personAddress({person: person, address: address});
-
-  person.addresses = person.addresses || [];
-  person.addresses.push(pa);
-
-  address.people = address.people || [];
-  address.people.push(pa);
-}
 
 var bob = person({name: 'bob'});
 var jane = person({name: 'jane'});
 
 var fremantle = address({
-  address: "Fremantle"
+  address: 'Fremantle',
+  personAddresses: (address) => [
+    personAddress({ person: bob, address: address }),
+    personAddress({ person: jane, address: address })
+  ]
 });
 var essert = address({
-  address: "15 Rue d'Essert"
+  address: "15 Rue d'Essert",
+  personAddresses: (address) => [
+    personAddress({ person: jane, address: address })
+  ]
 });
-
-personLivesInAddress(bob, fremantle);
-personLivesInAddress(jane, fremantle);
-personLivesInAddress(jane, essert);
 
 Promise.all([essert.save(), fremantle.save()]);
 ```
@@ -603,6 +611,24 @@ In SQL:
     | 23         | 12        |
     | 23         | 11        |
     --------------------------
+
+## Relationships Summary
+
+In summary, a relationship can be a field containing one of the following:
+
+* a sworm entity
+  1. the entity is saved
+  2. the ID is placed in the outer entity's `field_id` field. (See `foreignKeyFor`)
+  3. the outer entity is saved
+* an array of sworm entities
+  1. the outer entity is saved
+  2. each of the entities in the array are saved
+* a function that returns an array of sworm entities
+  1. the outer entity is saved
+  2. the function is called, passing the outer entity as the first argument
+  3. the function returns an array of entities
+  4. each of those entities are saved
+  5. the array is assigned to the outer entity's field
 
 # Unescaping
 
