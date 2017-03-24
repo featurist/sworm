@@ -1310,6 +1310,10 @@ module.exports = function(name, config, database, otherTests) {
             })
           })
         })
+
+        it('can access the underlying connection', function () {
+          expect(db.driver.connection).to.not.be.undefined
+        })
       });
 
       describe("connection", function() {
