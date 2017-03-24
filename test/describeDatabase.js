@@ -808,30 +808,6 @@ module.exports = function(name, config, database, otherTests) {
             });
           });
 
-          it("can save a many to one relationship with function", function() {
-            var bobsAddress;
-            var bob = person({
-                name: "bob",
-                address: function () {
-                  return bobsAddress = address({
-                    address: "15, Rue d'Essert"
-                  })
-                }
-            });
-
-            return bob.save().then(function() {
-              expect(statements).to.eql([ "insert", "insert" ]);
-              expect(bob.address).to.equal(bobsAddress);
-
-              return db.query("select * from addresses").then(function(addresses) {
-                expect(database.clean(addresses)).to.eql([{
-                  id: bob.address_id,
-                  address: "15, Rue d'Essert"
-                }]);
-              });
-            });
-          });
-
           it("can save a many to one relationship with function that returns undefined", function() {
             var bobsAddress;
             var bob = person({
@@ -926,7 +902,21 @@ module.exports = function(name, config, database, otherTests) {
             });
           });
 
-          it("can save a one to many relationship with function", function() {
+          it('throw if a non-array is returned from a function', function() {
+            var rueDEssert = address({
+              address: "15, Rue d'Essert",
+              people: function(address) {
+                return person({
+                  name: "bob",
+                  address: address
+                })
+              }
+            });
+
+            return expect(rueDEssert.save()).to.eventually.be.rejectedWith('must return arrays')
+          });
+
+          it("can save a one to many relationship with function that returns an array", function() {
             var bob;
             var jane;
             var rueDEssert = address({

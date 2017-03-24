@@ -123,6 +123,9 @@ var rowBase = function() {
     var v = obj[field];
     if (typeof v == 'function') {
       var value = obj[field](obj);
+      if (value && !(value instanceof Array)) {
+        throw new Error('functions must return arrays of entities')
+      }
       obj[field] = value;
       return value;
     } else {
@@ -131,9 +134,9 @@ var rowBase = function() {
   }
 
   function saveManyToOne(obj, field, options) {
-    var value = foreignField(obj, field);
+    var value = obj[field]
 
-    if (value && !(value instanceof Array)) {
+    if (value && !(value instanceof Array || typeof value === 'function')) {
       return value.save(options).then(function () {
         var foreignId =
           obj._meta.foreignKeyFor ?
@@ -144,8 +147,6 @@ var rowBase = function() {
           obj[foreignId] = value.identity();
         }
       });
-    } else {
-      return Promise.resolve();
     }
   }
 
@@ -162,8 +163,6 @@ var rowBase = function() {
       return Promise.all(items.map(function (item) {
         return item.save(options);
       }));
-    } else {
-      return Promise.resolve();
     }
   }
 
