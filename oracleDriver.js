@@ -32,12 +32,8 @@ module.exports = function () {
 
           return r
         })
-      } else if (options.formatRows == false) {
-        return resultsPromise;
       } else {
-        return resultsPromise.then(function (r) {
-          return formatRows(r);
-        });
+        return resultsPromise;
       }
     },
 
@@ -60,7 +56,11 @@ module.exports = function () {
         var numberOfRows = oracledb.maxRows || 100
 
         function fetchRows(allRows) {
-          return resultSet.getRows(numberOfRows).then(function (rows) {
+          return resultSet.getRows(numberOfRows).then(function (_rows) {
+            var rows = options.formatRows === false
+              ? _rows
+              : formatRows(results.metaData, _rows)
+
             allRows.push(rows)
 
             if (rows.length < numberOfRows) {
@@ -74,10 +74,7 @@ module.exports = function () {
         }
 
         return fetchRows([]).then(function (rows) {
-          return {
-            metaData: results.metaData,
-            rows: _.flatten(rows, true)
-          }
+          return _.flatten(rows, true)
         }, function (error) {
           return resultSet.close().then(function () {
             throw error
@@ -161,13 +158,12 @@ module.exports = function () {
   };
 };
 
-function formatRows(resultSet) {
-  var rows = resultSet.rows;
+function formatRows(metadata, rows) {
   if (!rows) {
     return rows;
   }
 
-  var fields = resultSet.metaData.map(function (field) {
+  var fields = metadata.map(function (field) {
     if (/[a-z]/.test(field.name)) {
       return field.name;
     } else {

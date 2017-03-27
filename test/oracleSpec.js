@@ -253,11 +253,13 @@ if (!process.env.TRAVIS) {
 
           return bob.save().then(function () {
             return db.query('select * from people', {}, {formatRows: false, outFormat: oracledb.OBJECT}).then(function (rows) {
-              expect(rows.metaData).to.eql([
-                {name: 'ID'},
-                {name: 'NAME'},
-                {name: 'ADDRESS_ID'},
-                {name: 'PHOTO'}
+              expect(rows).to.eql([
+                {
+                  ID: bob.id,
+                  NAME: 'bob',
+                  PHOTO: null,
+                  ADDRESS_ID: null
+                },
               ]);
             });
           });
