@@ -9,6 +9,10 @@ A very lightweight **write only** Node.js ORM, with support for:
 * Sqlite 3
 * Browser Web SQL
 
+## Changelog
+
+See [changelog.md](changelog.md)
+
 ## NPM
 
     npm install sworm
