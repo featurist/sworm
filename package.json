@@ -7,6 +7,7 @@
     "test": "test"
   },
   "dependencies": {
+    "cooperative": "1.0.2",
     "debug": "2.2.0",
     "randomstring": "1.1.5",
     "underscore": "1.8.3"

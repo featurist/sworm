@@ -7,6 +7,7 @@ var urlUtils = require('url');
 var redactConfig = require('./redactConfig');
 var outstandingQueries = require('./outstandingQueries');
 var randomstring = require('randomstring');
+var cooperative = require('cooperative')
 
 module.exports = function () {
   var oracledb = optionalRequire('oracledb');
@@ -56,11 +57,7 @@ module.exports = function () {
         var numberOfRows = oracledb.maxRows || 100
 
         function fetchRows(allRows) {
-          return resultSet.getRows(numberOfRows).then(function (_rows) {
-            var rows = options.formatRows === false
-              ? _rows
-              : formatRows(results.metaData, _rows)
-
+          return resultSet.getRows(numberOfRows).then(function (rows) {
             allRows.push(rows)
 
             if (rows.length < numberOfRows) {
@@ -73,8 +70,14 @@ module.exports = function () {
           })
         }
 
-        return fetchRows([]).then(function (rows) {
-          return _.flatten(rows, true)
+        return fetchRows([]).then(function (_rows) {
+          var rows = _.flatten(_rows, true)
+
+          if (options.formatRows === false) {
+            return rows
+          } else {
+            return formatRows(results.metaData, rows)
+          }
         }, function (error) {
           return resultSet.close().then(function () {
             throw error
@@ -159,10 +162,6 @@ module.exports = function () {
 };
 
 function formatRows(metadata, rows) {
-  if (!rows) {
-    return rows;
-  }
-
   var fields = metadata.map(function (field) {
     if (/[a-z]/.test(field.name)) {
       return field.name;
@@ -175,17 +174,17 @@ function formatRows(metadata, rows) {
     var length = rows.length;
     var results = new Array(length);
 
-    for (var r = 0; r < length; r++) {
-      var row = {};
-      results[r] = row;
+    return cooperative.forEach(rows, function(row, index) {
+      var formattedRow = {};
+      results[index] = formattedRow;
       for (var f = 0; f < fields.length; f++) {
-        row[fields[f]] = rows[r][f];
+        formattedRow[fields[f]] = row[f];
       }
-    }
-
-    return results;
+    }).then(function () {
+      return results
+    })
   } else {
-    return rows;
+    return Promise.resolve(rows);
   }
 }
 
