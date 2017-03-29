@@ -617,13 +617,40 @@ In SQL:
 In summary, a relationship can be a field containing one of the following:
 
 * a sworm entity
+
+  ```js
+    outer({
+      field: inner({ ... })
+    })
+  ```
+
   1. the entity is saved
   2. the ID is placed in the outer entity's `field_id` field. (See `foreignKeyFor`)
   3. the outer entity is saved
 * an array of sworm entities
+
+  ```js
+    outer({
+      field: [
+        inner({ ... }),
+        inner({ ... })
+      ]
+    })
+  ```
+
   1. the outer entity is saved
   2. each of the entities in the array are saved
 * a function that returns an array of sworm entities
+
+  ```js
+    outer({
+      field: (outer) => [
+        inner({ outer: outer, ... }),
+        inner({ outer: outer, ... })
+      ]
+    })
+  ```
+
   1. the outer entity is saved
   2. the function is called, passing the outer entity as the first argument
   3. the function returns an array of entities
