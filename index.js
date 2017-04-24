@@ -12,175 +12,233 @@ var redactConfig = require('./redactConfig');
 var urlUtils = require('url')
 var unescape = require('./unescape')
 
-var rowBase = function() {
-  function fieldsForObject(obj) {
-    return Object.keys(obj).filter(function (key) {
+function fieldsForObject(obj) {
+  return Object.keys(obj).filter(function (key) {
+    var value = obj[key];
+    return value instanceof Date
+      || unescape.isUnescape(value)
+      || value instanceof Buffer
+      || !(
+        value === null
+        || value === undefined
+        || value instanceof Object
+      );
+  });
+}
+
+function foreignFieldsForObject(obj) {
+  return Object.keys(obj).filter(function (key) {
+    if (/^_/.test(key) && key !== obj._meta.id) {
+      return false;
+    } else {
       var value = obj[key];
-      return value instanceof Date
-        || unescape.isUnescape(value)
-        || value instanceof Buffer
-        || !(
-          value === null
-          || value === undefined
-          || value instanceof Object
-        );
-    });
+      return !(value instanceof Date) && !(unescape.isUnescape(value)) && !(value instanceof Buffer) && value instanceof Object;
+    }
+  });
+}
+
+function mapDefinition (definition, fn) {
+  var foreignFields = foreignFieldsForObject(definition)
+
+  foreignFields.forEach(field => {
+    var foreign = definition[field]
+    definition[field] = fn(foreign)
+  })
+
+  return fn(definition)
+}
+
+function graphify(definition, rows) {
+  var map = mapDefinition(definition, model => {
+    var isOneToMany = model instanceof Array
+    return {
+      model: isOneToMany? model[0]: model,
+      isOneToMany,
+      identityMap: {}
+    }
+  })
+
+  function loadEntity (row, map) {
+    var fields = fieldsForObject(map.model)
+    var foreignFields = foreignFieldsForObject(map.model)
+
+    var id = row[map.model.identity()]
+    var entity = map.identityMap[id]
+    if (!entity) {
+      entity = map.identityMap[id] = {}
+      fields.forEach(field => {
+        entity[field] = row[map.model[field]]
+      })
+    }
+
+    foreignFields.forEach(field => {
+      var foreign = map.model[field]
+
+      if (foreign.isOneToMany) {
+        var array = entity[field]
+        if (!array) {
+          array = entity[field] = []
+        }
+        array.push(loadEntity(row, foreign))
+      } else if (!entity[field]) {
+        entity[field] = loadEntity(row, foreign)
+      }
+    })
+
+    return map.model._meta.model(entity)
   }
 
-  function foreignFieldsForObject(obj) {
-    return Object.keys(obj).filter(function (key) {
-      if (/^_/.test(key) && key !== obj._meta.id) {
-        return false;
-      } else {
-        var value = obj[key];
-        return !(value instanceof Date) && !(unescape.isUnescape(value)) && !(value instanceof Buffer) && value instanceof Object;
-      }
-    });
-  }
+  rows.forEach(row => {
+    loadEntity(row, map)
+  })
 
-  function insertStatement(obj, keys) {
-    var fields = keys.join(', ');
-    var values = keys.map(function (key) { return '@' + key; }).join(', ');
+  return Object.values(map.identityMap)
+}
 
-    if (!fields.length) {
-      if (obj._meta.db.driver.insertEmpty) {
-        return obj._meta.db.driver.insertEmpty(obj._meta);
-      } else {
-        return 'insert into ' + obj._meta.table + ' default values';
-      }
+function insertStatement(obj, keys) {
+  var fields = keys.join(', ');
+  var values = keys.map(function (key) { return '@' + key; }).join(', ');
+
+  if (!fields.length) {
+    if (obj._meta.db.driver.insertEmpty) {
+      return obj._meta.db.driver.insertEmpty(obj._meta);
     } else {
-      if (obj._meta.db.driver.insertStatement) {
-        return obj._meta.db.driver.insertStatement(obj._meta, fields, values)
-      } else {
-        return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ')';
-      }
+      return 'insert into ' + obj._meta.table + ' default values';
+    }
+  } else {
+    if (obj._meta.db.driver.insertStatement) {
+      return obj._meta.db.driver.insertStatement(obj._meta, fields, values)
+    } else {
+      return 'insert into ' + obj._meta.table + ' (' + fields + ') values (' + values + ')';
     }
   }
+}
 
-  function insert(obj) {
-    return obj._meta.db.whenConnected(function () {
-      var keys = fieldsForObject(obj);
-      var statementString = insertStatement(obj, keys);
+function insert(obj) {
+  return obj._meta.db.whenConnected(function () {
+    var keys = fieldsForObject(obj);
+    var statementString = insertStatement(obj, keys);
 
-      var params = _.pick(obj, keys);
+    var params = _.pick(obj, keys);
 
-      if (obj._meta.db.driver.outputIdKeys && !obj._meta.compoundKey) {
-        params = _.extend(params, obj._meta.db.driver.outputIdKeys(obj._meta.idType));
+    if (obj._meta.db.driver.outputIdKeys && !obj._meta.compoundKey) {
+      params = _.extend(params, obj._meta.db.driver.outputIdKeys(obj._meta.idType));
+    }
+
+    return obj._meta.db.query(statementString, params, {
+      insert: !obj._meta.compoundKey,
+      statement: obj._meta.compoundKey,
+      id: obj._meta.id
+    }).then(function (result) {
+      obj.setSaved();
+
+      if (!obj._meta.compoundKey) {
+        obj[obj._meta.id] = result.id;
       }
 
-      return obj._meta.db.query(statementString, params, {
-        insert: !obj._meta.compoundKey,
-        statement: obj._meta.compoundKey,
-        id: obj._meta.id
-      }).then(function (result) {
-        obj.setSaved();
-
-        if (!obj._meta.compoundKey) {
-          obj[obj._meta.id] = result.id;
-        }
-
-        return obj.setNotChanged();
-      });
+      return obj.setNotChanged();
     });
+  });
+}
+
+function update(obj) {
+  var keys = fieldsForObject(obj).filter(function (key) {
+    return key !== obj._meta.id;
+  });
+  var assignments = keys.map(function (key) {
+    return key + ' = @' + key;
+  }).join(', ');
+
+  var whereClause;
+
+  if (!obj.hasIdentity()) {
+    throw new Error(obj._meta.table + ' entity must have ' + obj._meta.id + ' to be updated');
   }
 
-  function update(obj) {
-    var keys = fieldsForObject(obj).filter(function (key) {
-      return key !== obj._meta.id;
-    });
-    var assignments = keys.map(function (key) {
+  if (obj._meta.compoundKey) {
+    keys.push.apply(keys, obj._meta.id);
+    whereClause = obj._meta.id.map(function (key) {
       return key + ' = @' + key;
-    }).join(', ');
+    }).join(' and ');
+  } else {
+    keys.push(obj._meta.id);
+    whereClause = obj._meta.id + ' = @' + obj._meta.id;
+  }
 
-    var whereClause;
+  var statementString = 'update ' + obj._meta.table + ' set ' + assignments + ' where ' + whereClause;
 
-    if (!obj.hasIdentity()) {
-      throw new Error(obj._meta.table + ' entity must have ' + obj._meta.id + ' to be updated');
-    }
-
-    if (obj._meta.compoundKey) {
-      keys.push.apply(keys, obj._meta.id);
-      whereClause = obj._meta.id.map(function (key) {
-        return key + ' = @' + key;
-      }).join(' and ');
+  return obj._meta.db.query(statementString, _.pick(obj, keys), {statement: true}).then(function(result) {
+    if (result.changes == 0) {
+      throw new Error(obj._meta.table + ' entity with ' + obj._meta.id + ' = ' + obj.identity() + ' not found to update')
     } else {
-      keys.push(obj._meta.id);
-      whereClause = obj._meta.id + ' = @' + obj._meta.id;
+      return obj.setNotChanged();
     }
+  });
+}
 
-    var statementString = 'update ' + obj._meta.table + ' set ' + assignments + ' where ' + whereClause;
+function foreignField(obj, field) {
+  var v = obj[field];
+  if (typeof v == 'function') {
+    var value = obj[field](obj);
+    if (value && !(value instanceof Array)) {
+      throw new Error('functions must return arrays of entities')
+    }
+    obj[field] = value;
+    return value;
+  } else {
+    return v;
+  }
+}
 
-    return obj._meta.db.query(statementString, _.pick(obj, keys), {statement: true}).then(function(result) {
-      if (result.changes == 0) {
-        throw new Error(obj._meta.table + ' entity with ' + obj._meta.id + ' = ' + obj.identity() + ' not found to update')
-      } else {
-        return obj.setNotChanged();
+function saveManyToOne(obj, field, options) {
+  var value = obj[field]
+
+  if (value && !(value instanceof Array || typeof value === 'function')) {
+    return value.save(options).then(function () {
+      var foreignId =
+        obj._meta.foreignKeyFor ?
+          obj._meta.foreignKeyFor(field) :
+            field + '_id';
+
+      if (!value._meta.compoundKey) {
+        obj[foreignId] = value.identity();
       }
     });
   }
+}
 
-  function foreignField(obj, field) {
-    var v = obj[field];
-    if (typeof v == 'function') {
-      var value = obj[field](obj);
-      if (value && !(value instanceof Array)) {
-        throw new Error('functions must return arrays of entities')
-      }
-      obj[field] = value;
-      return value;
-    } else {
-      return v;
-    }
-  }
+function saveManyToOnes(obj, options) {
+  return Promise.all(foreignFieldsForObject(obj).map(function (field) {
+    return saveManyToOne(obj, field, options);
+  }));
+}
 
-  function saveManyToOne(obj, field, options) {
-    var value = obj[field]
+function saveOneToMany(obj, field, options) {
+  var items = foreignField(obj, field);
 
-    if (value && !(value instanceof Array || typeof value === 'function')) {
-      return value.save(options).then(function () {
-        var foreignId =
-          obj._meta.foreignKeyFor ?
-            obj._meta.foreignKeyFor(field) :
-              field + '_id';
-
-        if (!value._meta.compoundKey) {
-          obj[foreignId] = value.identity();
-        }
-      });
-    }
-  }
-
-  function saveManyToOnes(obj, options) {
-    return Promise.all(foreignFieldsForObject(obj).map(function (field) {
-      return saveManyToOne(obj, field, options);
+  if (items instanceof Array) {
+    return Promise.all(items.map(function (item) {
+      return item.save(options);
     }));
   }
+}
 
-  function saveOneToMany(obj, field, options) {
-    var items = foreignField(obj, field);
+function saveOneToManys(obj, options) {
+  return Promise.all(foreignFieldsForObject(obj).map(function (field) {
+    return saveOneToMany(obj, field, options);
+  }));
+}
 
-    if (items instanceof Array) {
-      return Promise.all(items.map(function (item) {
-        return item.save(options);
-      }));
-    }
-  }
+function hash(obj) {
+  var h = crypto.createHash('md5');
+  var fields = fieldsForObject(obj).map(function (field) {
+    return [field, obj[field]];
+  });
+  h.update(JSON.stringify(fields));
+  return h.digest('hex');
+}
 
-  function saveOneToManys(obj, options) {
-    return Promise.all(foreignFieldsForObject(obj).map(function (field) {
-      return saveOneToMany(obj, field, options);
-    }));
-  }
-
-  function hash(obj) {
-    var h = crypto.createHash('md5');
-    var fields = fieldsForObject(obj).map(function (field) {
-      return [field, obj[field]];
-    });
-    h.update(JSON.stringify(fields));
-    return h.digest('hex');
-  }
-
+var rowBase = function() {
   return {
     save: function(options) {
       this._meta.db.ensureConfigured();
@@ -353,12 +411,21 @@ exports.db = function(config) {
         return row;
       }
 
+      proto._meta.model = model
+
       model.query = function() {
         var self = this;
         return db.query.apply(db, arguments).then(function (entities) {
           return entities.map(function (e) {
             return self(e, {saved: true});
           });
+        });
+      };
+
+      modelPrototype.queryGraph = function() {
+        var self = this;
+        return db.query.apply(db, arguments).then(function (entities) {
+          return graphify(self, entities)
         });
       };
 
@@ -384,6 +451,13 @@ exports.db = function(config) {
           self.logError(query, params, e);
           throw e;
         });
+      });
+    },
+
+    queryGraph: function(graphDefinition, query, params, options) {
+      var queryArgs = Array.prototype.slice.call(arguments, 1)
+      return db.query.apply(db, queryArgs).then(function (entities) {
+        return graphify(graphDefinition, entities)
       });
     },
 

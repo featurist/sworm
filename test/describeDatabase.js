@@ -1314,6 +1314,120 @@ module.exports = function(name, config, database, otherTests) {
         it('can access the underlying connection', function () {
           expect(db.driver.connection).to.not.be.undefined
         })
+
+        describe.only('graph queries', function () {
+          function clone(x) {
+            return JSON.parse(JSON.stringify(x))
+          }
+
+          it('can rebuild a graph with one to many relationships', async function () {
+            var bob
+            var jane
+            var jack
+
+            var somethingPlace = address({address: '1 something place', people: (address) => [
+              bob = person({name: 'bob', address: address}),
+              jane = person({name: 'jane', address: address})
+            ]})
+
+            var anotherPlace = address({address: '2 another place', people: (address) => [
+              jack = person({name: 'jack', address: address})
+            ]})
+
+            await somethingPlace.insert()
+            await anotherPlace.insert()
+
+            var def = address({
+              id: 'address_id',
+              address: 'address',
+              people: [
+                person({
+                  id: 'person_id',
+                  name: 'name'
+                })
+              ]
+            })
+              
+            var results = await db.queryGraph(def,
+              'select ' +
+              'people.id as person_id, name, addresses.id as address_id, address ' +
+              'from people join addresses on people.address_id = addresses.id ' +
+              'order by address.id, person.id'
+            )
+
+            expect(clone(results)).to.eql([
+              {
+                id: somethingPlace.id,
+                address: '1 something place',
+                people: [
+                  {
+                    id: bob.id,
+                    name: 'bob'
+                  },
+                  {
+                    id: jane.id,
+                    name: 'jane'
+                  }
+                ]
+              },
+              {
+                id: anotherPlace.id,
+                address: '2 another place',
+                people: [
+                  {
+                    id: jack.id,
+                    name: 'jack'
+                  }
+                ]
+              }
+            ]);
+          });
+
+          it('can rebuild a graph with one to one relationships', async function () {
+            var somethingPlace
+            var anotherPlace
+            var bob = person({name: 'bob', address: somethingPlace = address({address: '1 something place'})})
+            var mary = person({name: 'mary', address: anotherPlace = address({address: '2 another place'})})
+
+            await bob.save()
+            await mary.save()
+
+            var def = address({
+              id: 'address_id',
+              address: 'address',
+              people: person({
+                id: 'person_id',
+                name: 'name'
+              })
+            })
+              
+            var results = await db.queryGraph(def,
+              'select ' +
+              'people.id as person_id, name, addresses.id as address_id, address ' +
+              'from people join addresses on people.address_id = addresses.id ' +
+              'order by address.id, person.id'
+            )
+
+            expect(clone(results)).to.eql([
+              {
+                id: somethingPlace.id,
+                address: '1 something place',
+                people: {
+                  id: bob.id,
+                  name: 'bob'
+                },
+              },
+              {
+                id: anotherPlace.id,
+                address: '2 another place',
+                people: {
+                  id: mary.id,
+                  name: 'mary'
+                }
+              }
+            ]);
+          });
+        })
       });
 
       describe("connection", function() {
