@@ -477,6 +477,23 @@ module.exports = function(name, config, database, otherTests) {
           });
         });
 
+        it('throws when inner entity cannot be saved', () => {
+          var a = address({
+            address: 'asdf',
+            persion: function (a) {
+              return [
+                person({
+                  name: 'bob',
+                  address: a,
+                  non_extant_field: 'haha'
+                })
+              ]
+            }
+          })
+
+          return expect(a.save()).to.eventually.be.rejectedWith(/non_extant_field/i);
+        })
+
         describe("custom id columns", function() {
           it("can insert with weird_id", function() {
             var p = personWeirdId({
@@ -1223,7 +1240,7 @@ module.exports = function(name, config, database, otherTests) {
             var bob2 = person({name: 'bob2'})
 
             return bob2.upsert().then(function () {
-              return db.query('select * from people')
+              return db.query('select * from people order by name')
             }).then(function (rows) {
               expect(rows.map(function (r) { return r.name })).to.eql([
                 'bob',
