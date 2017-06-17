@@ -41,6 +41,7 @@ module.exports = function(name, config, database, otherTests) {
         var db;
         var tables = [];
         var person;
+        var pet;
         var personWeirdId
         var address;
         var personAddress;
@@ -81,6 +82,10 @@ module.exports = function(name, config, database, otherTests) {
 
             person = db.model({
               table: "people"
+            });
+
+            pet = db.model({
+              table: "pets"
             });
 
             address = db.model({
@@ -1332,7 +1337,7 @@ module.exports = function(name, config, database, otherTests) {
           expect(db.driver.connection).to.not.be.undefined
         })
 
-        describe.only('graph queries', function () {
+        describe('graph queries', function () {
           function clone(x) {
             return JSON.parse(JSON.stringify(x))
           }
@@ -1341,14 +1346,32 @@ module.exports = function(name, config, database, otherTests) {
             var bob
             var jane
             var jack
+            var jessy
+            var miffy
 
             var somethingPlace = address({address: '1 something place', people: (address) => [
-              bob = person({name: 'bob', address: address}),
+              bob = person({
+                name: 'bob',
+                address: address,
+                pets: function (owner) {
+                  return [
+                    jessy = pet({name: 'jessy', owner: owner})
+                  ]
+                }
+              }),
               jane = person({name: 'jane', address: address})
             ]})
 
             var anotherPlace = address({address: '2 another place', people: (address) => [
-              jack = person({name: 'jack', address: address})
+              jack = person({
+                name: 'jack',
+                address: address,
+                pets: function (owner) {
+                  return [
+                    miffy = pet({name: 'miffy', owner: owner})
+                  ]
+                }
+              })
             ]})
 
             await somethingPlace.insert()
@@ -1360,17 +1383,25 @@ module.exports = function(name, config, database, otherTests) {
               people: [
                 person({
                   id: 'person_id',
-                  name: 'name'
+                  name: 'name',
+                  pets: [
+                    pet({
+                      id: 'pet_id',
+                      name: 'pet_name'
+                    })
+                  ]
                 })
               ]
             })
-              
-            var results = await db.queryGraph(def,
+
+            var sql = 
               'select ' +
-              'people.id as person_id, name, addresses.id as address_id, address ' +
+              'people.id as person_id, people.name as name, addresses.id as address_id, address, pets.id as pet_id, pets.name as pet_name ' +
               'from people join addresses on people.address_id = addresses.id ' +
-              'order by address.id, person.id'
-            )
+              'left join pets on pets.owner_id = people.id ' +
+              'order by addresses.address, people.name, pets.name'
+
+            var results = await db.queryGraph(def, sql)
 
             expect(clone(results)).to.eql([
               {
@@ -1379,7 +1410,13 @@ module.exports = function(name, config, database, otherTests) {
                 people: [
                   {
                     id: bob.id,
-                    name: 'bob'
+                    name: 'bob',
+                    pets: [
+                      {
+                        id: jessy.id,
+                        name: 'jessy'
+                      }
+                    ]
                   },
                   {
                     id: jane.id,
@@ -1393,7 +1430,13 @@ module.exports = function(name, config, database, otherTests) {
                 people: [
                   {
                     id: jack.id,
-                    name: 'jack'
+                    name: 'jack',
+                    pets: [
+                      {
+                        id: miffy.id,
+                        name: 'miffy'
+                      }
+                    ]
                   }
                 ]
               }
@@ -1422,7 +1465,7 @@ module.exports = function(name, config, database, otherTests) {
               'select ' +
               'people.id as person_id, name, addresses.id as address_id, address ' +
               'from people join addresses on people.address_id = addresses.id ' +
-              'order by address.id, person.id'
+              'order by addresses.address, people.name'
             )
 
             expect(clone(results)).to.eql([

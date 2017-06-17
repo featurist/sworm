@@ -37,55 +37,61 @@ function foreignFieldsForObject(obj) {
   });
 }
 
-function mapDefinition (definition, fn) {
-  var foreignFields = foreignFieldsForObject(definition)
+function mapDefinition (graphDefinition) {
+  var isOneToMany = graphDefinition instanceof Array
+  var model = isOneToMany? graphDefinition[0]: graphDefinition
+
+  var foreignFields = foreignFieldsForObject(model)
 
   foreignFields.forEach(field => {
-    var foreign = definition[field]
-    definition[field] = fn(foreign)
+    var foreign = model[field]
+    model[field] = mapDefinition(foreign)
   })
 
-  return fn(definition)
+  return {
+    model: model,
+    isOneToMany,
+    identityMap: {}
+  }
 }
 
 function graphify(definition, rows) {
-  var map = mapDefinition(definition, model => {
-    var isOneToMany = model instanceof Array
-    return {
-      model: isOneToMany? model[0]: model,
-      isOneToMany,
-      identityMap: {}
-    }
-  })
+  var map = mapDefinition([definition])
 
   function loadEntity (row, map) {
     var fields = fieldsForObject(map.model)
     var foreignFields = foreignFieldsForObject(map.model)
 
     var id = row[map.model.identity()]
-    var entity = map.identityMap[id]
-    if (!entity) {
-      entity = map.identityMap[id] = {}
-      fields.forEach(field => {
-        entity[field] = row[map.model[field]]
-      })
-    }
-
-    foreignFields.forEach(field => {
-      var foreign = map.model[field]
-
-      if (foreign.isOneToMany) {
-        var array = entity[field]
-        if (!array) {
-          array = entity[field] = []
-        }
-        array.push(loadEntity(row, foreign))
-      } else if (!entity[field]) {
-        entity[field] = loadEntity(row, foreign)
+    if (id !== null) {
+      var entity = map.identityMap[id]
+      if (!entity) {
+        entity = map.identityMap[id] = {}
+        fields.forEach(field => {
+          entity[field] = row[map.model[field]]
+        })
       }
-    })
 
-    return map.model._meta.model(entity)
+      foreignFields.forEach(field => {
+        var foreign = map.model[field]
+
+        var foreignEntity = loadEntity(row, foreign)
+
+        if (foreignEntity) {
+          if (foreign.isOneToMany) {
+            var array = entity[field]
+            if (!array) {
+              array = entity[field] = []
+            }
+            array.push(foreignEntity)
+          } else if (!entity[field]) {
+            entity[field] = foreignEntity
+          }
+        }
+      })
+
+      return map.model._meta.model(entity)
+    }
   }
 
   rows.forEach(row => {
