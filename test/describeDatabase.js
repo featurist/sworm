@@ -477,7 +477,7 @@ module.exports = function(name, config, database, otherTests) {
           });
         });
 
-        it('throws when inner entity cannot be saved', () => {
+        it('throws when inner entity cannot be saved', function () {
           var a = address({
             address: 'asdf',
             persion: function (a) {
