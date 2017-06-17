@@ -202,19 +202,15 @@ var rowBase = function() {
       }
 
       if (!self._saving) {
-        self.setSaving(saveManyToOnes(this, {oneToManyPromises: oneToManyPromises}).then(function () {
+        var saving = saveManyToOnes(this, {oneToManyPromises: oneToManyPromises}).then(function () {
           if (self.changed() || force) {
             var writePromise = self.saved() || forceUpdate ? update(self) : insert(self);
 
             return writePromise.then(function () {
-              return {
-                oneToManys: saveOneToManys(self, {oneToManyPromises: oneToManyPromises})
-              };
+              oneToManyPromises.push(saveOneToManys(self, {oneToManyPromises: oneToManyPromises}))
             });
           } else {
-            return {
-              oneToManys: saveOneToManys(self, {oneToManyPromises: oneToManyPromises})
-            };
+            oneToManyPromises.push(saveOneToManys(self, {oneToManyPromises: oneToManyPromises}))
           }
         }).then(function (value) {
           self.setSaving(false);
@@ -222,15 +218,24 @@ var rowBase = function() {
         }, function (error) {
           self.setSaving(false);
           throw error;
-        }));
+        })
+
+        self.setSaving(saving)
+        oneToManyPromises.push(saving)
       }
 
-      oneToManyPromises.push(self._saving.then(function (r) {
-        return r.oneToManys;
-      }));
+      function waitForPromises () {
+        if (oneToManyPromises.length) {
+          var promises = oneToManyPromises.slice()
+          oneToManyPromises.length = 0
+          return Promise.all(promises).then(waitForPromises)
+        } else {
+          return Promise.resolve()
+        }
+      }
 
       if (waitForOneToManys) {
-        return Promise.all(oneToManyPromises.concat([self._saving]))
+        return waitForPromises()
       } else {
         return self._saving;
       }

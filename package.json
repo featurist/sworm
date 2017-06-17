@@ -3,30 +3,34 @@
   "version": "3.6.0",
   "description": "a lightweight write-only ORM for MSSQL, MySQL, PostgreSQL, Oracle, Sqlite 3",
   "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
   "dependencies": {
     "cooperative": "1.1.0",
-    "debug": "2.2.0",
+    "debug": "2.6.8",
     "randomstring": "1.1.5",
     "underscore": "1.8.3"
   },
   "devDependencies": {
-    "chai": "3.5.0",
-    "chai-as-promised": "5.3.0",
-    "electron": "1.6.2",
-    "electron-mocha": "3.3.0",
+    "chai": "4.0.2",
+    "chai-as-promised": "7.0.0",
+    "electron": "1.6.11",
+    "electron-mocha": "4.0.0",
     "es6-promise": "3.2.1",
     "fs-promise": "0.5.0",
-    "mocha": "3.2.0",
+    "mocha": "3.4.2",
     "mssql": "3.3.0",
     "mysql": "2.11.1",
+    "object-keys": "1.0.11",
     "pg": "6.1.0",
     "sqlite3": "3.1.8"
   },
   "scripts": {
-    "test": "mocha && electron-mocha --renderer test/browser"
+    "test": "mocha && npm run test-websql",
+    "test-websql": "electron-mocha --renderer test/browser",
+    "test-oracledb": "mocha test/oracleSpec.js",
+    "test-mysql": "mocha test/mysqlSpec.js",
+    "test-postgres": "mocha test/postgresSpec.js",
+    "test-mssql": "mocha test/mssqlSpec.js",
+    "test-sqlite": "mocha test/sqliteSpec.js"
   },
   "repository": {
     "type": "git",
