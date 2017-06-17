@@ -1342,157 +1342,171 @@ module.exports = function(name, config, database, otherTests) {
             return JSON.parse(JSON.stringify(x))
           }
 
-          it('can rebuild a graph with one to many relationships', async function () {
+          it('can rebuild a graph with one to many relationships', function () {
             var bob
             var jane
             var jack
             var jessy
             var miffy
 
-            var somethingPlace = address({address: '1 something place', people: (address) => [
-              bob = person({
-                name: 'bob',
-                address: address,
-                pets: function (owner) {
-                  return [
-                    jessy = pet({name: 'jessy', owner: owner})
-                  ]
-                }
-              }),
-              jane = person({name: 'jane', address: address})
-            ]})
-
-            var anotherPlace = address({address: '2 another place', people: (address) => [
-              jack = person({
-                name: 'jack',
-                address: address,
-                pets: function (owner) {
-                  return [
-                    miffy = pet({name: 'miffy', owner: owner})
-                  ]
-                }
-              })
-            ]})
-
-            await somethingPlace.insert()
-            await anotherPlace.insert()
-
-            var def = address({
-              id: 'address_id',
-              address: 'address',
-              people: [
-                person({
-                  id: 'person_id',
-                  name: 'name',
-                  pets: [
-                    pet({
-                      id: 'pet_id',
-                      name: 'pet_name'
-                    })
-                  ]
-                })
-              ]
+            var somethingPlace = address({
+              address: '1 something place',
+              people: function (address) {
+                return [
+                  bob = person({
+                    name: 'bob',
+                    address: address,
+                    pets: function (owner) {
+                      return [
+                        jessy = pet({name: 'jessy', owner: owner})
+                      ]
+                    }
+                  }),
+                  jane = person({name: 'jane', address: address})
+                ]
+              }
             })
 
-            var sql = 
-              'select ' +
-              'people.id as person_id, people.name as name, addresses.id as address_id, address, pets.id as pet_id, pets.name as pet_name ' +
-              'from people join addresses on people.address_id = addresses.id ' +
-              'left join pets on pets.owner_id = people.id ' +
-              'order by addresses.address, people.name, pets.name'
+            var anotherPlace = address({
+              address: '2 another place',
+              people: function (address) {
+                return [
+                  jack = person({
+                    name: 'jack',
+                    address: address,
+                    pets: function (owner) {
+                      return [
+                        miffy = pet({name: 'miffy', owner: owner})
+                      ]
+                    }
+                  })
+                ]
+              }
+            })
 
-            var results = await db.queryGraph(def, sql)
-
-            expect(clone(results)).to.eql([
-              {
-                id: somethingPlace.id,
-                address: '1 something place',
+            return Promise.all([
+              somethingPlace.insert(),
+              anotherPlace.insert()
+            ]).then(function () {
+              var def = address({
+                id: 'address_id',
+                address: 'address',
                 people: [
-                  {
-                    id: bob.id,
-                    name: 'bob',
+                  person({
+                    id: 'person_id',
+                    name: 'name',
                     pets: [
+                      pet({
+                        id: 'pet_id',
+                        name: 'pet_name'
+                      })
+                    ]
+                  })
+                ]
+              })
+
+              var sql = 
+                'select ' +
+                'people.id as person_id, people.name as name, addresses.id as address_id, address, pets.id as pet_id, pets.name as pet_name ' +
+                'from people join addresses on people.address_id = addresses.id ' +
+                'left join pets on pets.owner_id = people.id ' +
+                'order by addresses.address, people.name, pets.name'
+
+              return db.queryGraph(def, sql).then(function (results) {
+                expect(clone(results)).to.eql([
+                  {
+                    id: somethingPlace.id,
+                    address: '1 something place',
+                    people: [
                       {
-                        id: jessy.id,
-                        name: 'jessy'
+                        id: bob.id,
+                        name: 'bob',
+                        pets: [
+                          {
+                            id: jessy.id,
+                            name: 'jessy'
+                          }
+                        ]
+                      },
+                      {
+                        id: jane.id,
+                        name: 'jane'
                       }
                     ]
                   },
                   {
-                    id: jane.id,
-                    name: 'jane'
-                  }
-                ]
-              },
-              {
-                id: anotherPlace.id,
-                address: '2 another place',
-                people: [
-                  {
-                    id: jack.id,
-                    name: 'jack',
-                    pets: [
+                    id: anotherPlace.id,
+                    address: '2 another place',
+                    people: [
                       {
-                        id: miffy.id,
-                        name: 'miffy'
+                        id: jack.id,
+                        name: 'jack',
+                        pets: [
+                          {
+                            id: miffy.id,
+                            name: 'miffy'
+                          }
+                        ]
                       }
                     ]
                   }
-                ]
-              }
-            ]);
+                ]);
+              })
+            })
           });
 
-          it('can rebuild a graph with one to one relationships', async function () {
+          it('can rebuild a graph with one to one relationships', function () {
             var somethingPlace
             var anotherPlace
             var bob = person({name: 'bob', address: somethingPlace = address({address: '1 something place'})})
             var mary = person({name: 'mary', address: anotherPlace = address({address: '2 another place'})})
 
-            await bob.save()
-            await mary.save()
-
-            var def = address({
-              id: 'address_id',
-              address: 'address',
-              people: person({
-                id: 'person_id',
-                name: 'name'
+            return Promise.all([
+              bob.save(),
+              mary.save()
+            ]).then(function () {
+              var def = address({
+                id: 'address_id',
+                address: 'address',
+                people: person({
+                  id: 'person_id',
+                  name: 'name'
+                })
+              })
+                
+              return db.queryGraph(def,
+                'select ' +
+                'people.id as person_id, name, addresses.id as address_id, address ' +
+                'from people join addresses on people.address_id = addresses.id ' +
+                'order by addresses.address, people.name'
+              ).then(function (results) {
+                expect(clone(results)).to.eql([
+                  {
+                    id: somethingPlace.id,
+                    address: '1 something place',
+                    people: {
+                      id: bob.id,
+                      name: 'bob'
+                    },
+                  },
+                  {
+                    id: anotherPlace.id,
+                    address: '2 another place',
+                    people: {
+                      id: mary.id,
+                      name: 'mary'
+                    }
+                  }
+                ]);
               })
             })
-              
-            var results = await db.queryGraph(def,
-              'select ' +
-              'people.id as person_id, name, addresses.id as address_id, address ' +
-              'from people join addresses on people.address_id = addresses.id ' +
-              'order by addresses.address, people.name'
-            )
-
-            expect(clone(results)).to.eql([
-              {
-                id: somethingPlace.id,
-                address: '1 something place',
-                people: {
-                  id: bob.id,
-                  name: 'bob'
-                },
-              },
-              {
-                id: anotherPlace.id,
-                address: '2 another place',
-                people: {
-                  id: mary.id,
-                  name: 'mary'
-                }
-              }
-            ]);
           });
 
           context('with a person and their pet', function () {
-            let bob
-            let jessy
+            var bob
+            var jessy
 
-            beforeEach(() => {
+            beforeEach(function () {
               bob = person({
                 name: 'bob',
                 pet: function (owner) {
@@ -1505,7 +1519,7 @@ module.exports = function(name, config, database, otherTests) {
               return bob.save()
             })
 
-            it('throws if identity column not mapped', async () => {
+            it('throws if identity column not mapped', function () {
               var def = person({
                 id: 'id',
                 name: 'name',
@@ -1514,14 +1528,12 @@ module.exports = function(name, config, database, otherTests) {
                 })
               })
 
-              const sql = `
-                select people.id, people.name, pets.name as pet_name from people join pets on people.id = pets.owner_id
-              `
+              var sql = 'select people.id, people.name, pets.name as pet_name from people join pets on people.id = pets.owner_id'
 
               return expect(db.queryGraph(def, sql)).to.eventually.be.rejectedWith('expected definition for pets to have id')
             })
 
-            it('throws if identity column not in sql', async () => {
+            it('throws if identity column not in sql', function () {
               var def = person({
                 id: 'id',
                 name: 'name',
@@ -1531,14 +1543,12 @@ module.exports = function(name, config, database, otherTests) {
                 })
               })
 
-              const sql = `
-                select people.id, people.name, pets.name as pet_name from people join pets on people.id = pets.owner_id
-              `
+              var sql = 'select people.id, people.name, pets.name as pet_name from people join pets on people.id = pets.owner_id'
 
               return expect(db.queryGraph(def, sql)).to.eventually.be.rejectedWith('expected pets.id to be present in results as pet_id')
             })
 
-            it('can update the pet', async () => {
+            it('can update the pet', function () {
               var def = person({
                 id: 'id',
                 name: 'name',
@@ -1550,26 +1560,29 @@ module.exports = function(name, config, database, otherTests) {
                 ]
               })
 
-              const sql = `
-                select people.id, people.name, pets.name as pet_name, pets.id as pet_id from people join pets on people.id = pets.owner_id
-              `
+              var sql = 'select people.id, people.name, pets.name as pet_name, pets.id as pet_id from people join pets on people.id = pets.owner_id'
 
-              const loadedBob = (await db.queryGraph(def, sql))[0]
-              loadedBob.pets[0].name = 'minibob'
-              statements = [];
-              await loadedBob.save()
-              expect(statements).to.eql(['update'])
+              return db.queryGraph(def, sql).then(function (results) {
+                var loadedBob = results[0]
+                loadedBob.pets[0].name = 'minibob'
+                statements = [];
+                return loadedBob.save().then(function () {
+                  expect(statements).to.eql(['update'])
 
-              expect(await db.query('select * from pets')).to.eql([
-                {
-                  id: jessy.id,
-                  name: 'minibob',
-                  owner_id: bob.id
-                }
-              ])
+                  return db.query('select * from pets').then(function (pets) {
+                    expect(pets).to.eql([
+                      {
+                        id: jessy.id,
+                        name: 'minibob',
+                        owner_id: bob.id
+                      }
+                    ])
+                  })
+                })
+              })
             })
 
-            it('can update the person', async () => {
+            it('can update the person', function () {
               var def = person({
                 id: 'id',
                 name: 'name',
@@ -1581,24 +1594,27 @@ module.exports = function(name, config, database, otherTests) {
                 ]
               })
 
-              const sql = `
-                select people.id, people.name, pets.name as pet_name, pets.id as pet_id from people join pets on people.id = pets.owner_id
-              `
+              var sql = 'select people.id, people.name, pets.name as pet_name, pets.id as pet_id from people join pets on people.id = pets.owner_id'
 
-              const loadedBob = (await db.queryGraph(def, sql))[0]
-              loadedBob.name = 'bob2'
-              statements = [];
-              await loadedBob.save()
-              expect(statements).to.eql(['update'])
+              return db.queryGraph(def, sql).then(function (results) {
+                var loadedBob = results[0]
+                loadedBob.name = 'bob2'
+                statements = [];
+                return loadedBob.save().then(function () {
+                  expect(statements).to.eql(['update'])
 
-              expect(await db.query('select * from people')).to.eql([
-                {
-                  address_id: null,
-                  id: bob.id,
-                  name: 'bob2',
-                  photo: null
-                }
-              ])
+                  return db.query('select * from people').then(function (people) {
+                    expect(people).to.eql([
+                      {
+                        address_id: null,
+                        id: bob.id,
+                        name: 'bob2',
+                        photo: null
+                      }
+                    ])
+                  })
+                })
+              })
             })
           })
         })

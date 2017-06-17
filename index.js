@@ -43,14 +43,14 @@ function mapDefinition (graphDefinition) {
 
   var foreignFields = foreignFieldsForObject(model)
 
-  foreignFields.forEach(field => {
+  foreignFields.forEach(function (field) {
     var foreign = model[field]
     model[field] = mapDefinition(foreign)
   })
 
   return {
     model: model,
-    isOneToMany,
+    isOneToMany: isOneToMany,
     identityMap: {}
   }
 }
@@ -76,12 +76,12 @@ function graphify(definition, rows) {
       var entity = map.identityMap[id]
       if (!entity) {
         entity = map.identityMap[id] = map.model._meta.model({}, {saved: true})
-        fields.forEach(field => {
+        fields.forEach(function (field) {
           entity[field] = row[map.model[field]]
         })
       }
 
-      foreignFields.forEach(field => {
+      foreignFields.forEach(function (field) {
         var foreign = map.model[field]
 
         var foreignEntity = loadEntity(row, foreign)
@@ -104,7 +104,7 @@ function graphify(definition, rows) {
     }
   }
 
-  rows.forEach(row => {
+  rows.forEach(function (row) {
     loadEntity(row, map)
   })
 
