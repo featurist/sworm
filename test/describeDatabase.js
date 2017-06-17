@@ -70,7 +70,7 @@ module.exports = function(name, config, database, otherTests) {
             var originalLog = this.log;
             this.log = undefined;
 
-            var match = /^(insert|update|delete|select|begin|commit|rollback)/.exec(sql);
+            var match = /^\s*(insert|update|delete|select|begin|commit|rollback)/.exec(sql);
             statements.push(match[1]);
 
             this.logResults.apply(this, arguments);
@@ -1487,6 +1487,120 @@ module.exports = function(name, config, database, otherTests) {
               }
             ]);
           });
+
+          context('with a person and their pet', function () {
+            let bob
+            let jessy
+
+            beforeEach(() => {
+              bob = person({
+                name: 'bob',
+                pet: function (owner) {
+                  return [
+                    jessy = pet({name: 'jessy', owner: owner})
+                  ]
+                }
+              })
+
+              return bob.save()
+            })
+
+            it('throws if identity column not mapped', async () => {
+              var def = person({
+                id: 'id',
+                name: 'name',
+                pet: pet({
+                  name: 'pet_name'
+                })
+              })
+
+              const sql = `
+                select people.id, people.name, pets.name as pet_name from people join pets on people.id = pets.owner_id
+              `
+
+              return expect(db.queryGraph(def, sql)).to.eventually.be.rejectedWith('expected definition for pets to have id')
+            })
+
+            it('throws if identity column not in sql', async () => {
+              var def = person({
+                id: 'id',
+                name: 'name',
+                pet: pet({
+                  id: 'pet_id',
+                  name: 'pet_name'
+                })
+              })
+
+              const sql = `
+                select people.id, people.name, pets.name as pet_name from people join pets on people.id = pets.owner_id
+              `
+
+              return expect(db.queryGraph(def, sql)).to.eventually.be.rejectedWith('expected pets.id to be present in results as pet_id')
+            })
+
+            it('can update the pet', async () => {
+              var def = person({
+                id: 'id',
+                name: 'name',
+                pets: [
+                  pet({
+                    id: 'pet_id',
+                    name: 'pet_name'
+                  })
+                ]
+              })
+
+              const sql = `
+                select people.id, people.name, pets.name as pet_name, pets.id as pet_id from people join pets on people.id = pets.owner_id
+              `
+
+              const loadedBob = (await db.queryGraph(def, sql))[0]
+              loadedBob.pets[0].name = 'minibob'
+              statements = [];
+              await loadedBob.save()
+              expect(statements).to.eql(['update'])
+
+              expect(await db.query('select * from pets')).to.eql([
+                {
+                  id: jessy.id,
+                  name: 'minibob',
+                  owner_id: bob.id
+                }
+              ])
+            })
+
+            it('can update the person', async () => {
+              var def = person({
+                id: 'id',
+                name: 'name',
+                pets: [
+                  pet({
+                    id: 'pet_id',
+                    name: 'pet_name'
+                  })
+                ]
+              })
+
+              const sql = `
+                select people.id, people.name, pets.name as pet_name, pets.id as pet_id from people join pets on people.id = pets.owner_id
+              `
+
+              const loadedBob = (await db.queryGraph(def, sql))[0]
+              loadedBob.name = 'bob2'
+              statements = [];
+              await loadedBob.save()
+              expect(statements).to.eql(['update'])
+
+              expect(await db.query('select * from people')).to.eql([
+                {
+                  address_id: null,
+                  id: bob.id,
+                  name: 'bob2',
+                  photo: null
+                }
+              ])
+            })
+          })
         })
       });
 

@@ -62,11 +62,20 @@ function graphify(definition, rows) {
     var fields = fieldsForObject(map.model)
     var foreignFields = foreignFieldsForObject(map.model)
 
-    var id = row[map.model.identity()]
+    if (!map.model.hasIdentity()) {
+      throw new Error('expected definition for ' + map.model._meta.table + ' to have id')
+    }
+    var idField = map.model.identity()
+
+    if (!row.hasOwnProperty(idField)) {
+      throw new Error('expected ' + map.model._meta.table + '.' + map.model._meta.id + ' to be present in results as ' + idField)
+    }
+
+    var id = row[idField]
     if (id !== null) {
       var entity = map.identityMap[id]
       if (!entity) {
-        entity = map.identityMap[id] = {}
+        entity = map.identityMap[id] = map.model._meta.model({}, {saved: true})
         fields.forEach(field => {
           entity[field] = row[map.model[field]]
         })
@@ -90,7 +99,8 @@ function graphify(definition, rows) {
         }
       })
 
-      return map.model._meta.model(entity)
+      entity.setNotChanged()
+      return entity
     }
   }
 
@@ -187,7 +197,7 @@ function foreignField(obj, field) {
   if (typeof v == 'function') {
     var value = obj[field](obj);
     if (value && !(value instanceof Array)) {
-      throw new Error('functions must return arrays of entities')
+      throw new Error('functions must return arrays of entities: ' + obj._meta.table + '.' + field)
     }
     obj[field] = value;
     return value;
