@@ -1107,6 +1107,72 @@ module.exports = function(name, config, database, otherTests) {
               });
             });
           });
+
+          it('can save outer with an inner with a foreign key', function () {
+            var bob
+            var bobsPlace = address({
+              address: "bob's place",
+              person: bob = person(
+                {
+                  name: 'bob'
+                },
+                {
+                  foreignKeyField: 'address'
+                }
+              )
+            })
+
+            return bobsPlace.save().then(function () {
+              return db.query('select * from addresses').then(function (addresses) {
+                expect(addresses).to.eql([{
+                  address: "bob's place",
+                  id: bobsPlace.id
+                }])
+              })
+            }).then(function () {
+              return db.query('select * from people').then(function (people) {
+                expect(people).to.eql([{
+                  id: bob.id,
+                  name: 'bob',
+                  address_id: bobsPlace.id,
+                  photo: null
+                }])
+              })
+            })
+          })
+
+          it("can save outer and inner but with no foreign key", function () {
+            var bob
+            var bobsPlace = address({
+              address: "bob's place",
+              person: bob = person(
+                {
+                  name: 'bob'
+                },
+                {
+                  foreignKeyField: false
+                }
+              )
+            })
+
+            return bobsPlace.save().then(function () {
+              return db.query('select * from addresses').then(function (addresses) {
+                expect(addresses).to.eql([{
+                  address: "bob's place",
+                  id: bobsPlace.id
+                }])
+              })
+            }).then(function () {
+              return db.query('select * from people').then(function (people) {
+                expect(people).to.eql([{
+                  id: bob.id,
+                  name: 'bob',
+                  address_id: null,
+                  photo: null
+                }])
+              })
+            })
+          })
         });
 
         describe('unescape', function () {
@@ -1552,19 +1618,17 @@ module.exports = function(name, config, database, otherTests) {
               var def = person({
                 id: 'id',
                 name: 'name',
-                pets: [
-                  pet({
-                    id: 'pet_id',
-                    name: 'pet_name'
-                  })
-                ]
+                pet: pet({
+                  id: 'pet_id',
+                  name: 'pet_name'
+                })
               })
 
               var sql = 'select people.id, people.name, pets.name as pet_name, pets.id as pet_id from people join pets on people.id = pets.owner_id'
 
               return db.queryGraph(def, sql).then(function (results) {
                 var loadedBob = results[0]
-                loadedBob.pets[0].name = 'minibob'
+                loadedBob.pet.name = 'minibob'
                 statements = [];
                 return loadedBob.save().then(function () {
                   expect(statements).to.eql(['update'])
@@ -1586,12 +1650,10 @@ module.exports = function(name, config, database, otherTests) {
               var def = person({
                 id: 'id',
                 name: 'name',
-                pets: [
-                  pet({
-                    id: 'pet_id',
-                    name: 'pet_name'
-                  })
-                ]
+                pet: pet({
+                  id: 'pet_id',
+                  name: 'pet_name'
+                })
               })
 
               var sql = 'select people.id, people.name, pets.name as pet_name, pets.id as pet_id from people join pets on people.id = pets.owner_id'

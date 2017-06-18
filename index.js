@@ -94,6 +94,7 @@ function graphify(definition, rows) {
             }
             array.push(foreignEntity)
           } else if (!entity[field]) {
+            foreignEntity.setForeignKeyField(false)
             entity[field] = foreignEntity
           }
         }
@@ -209,7 +210,7 @@ function foreignField(obj, field) {
 function saveManyToOne(obj, field, options) {
   var value = obj[field]
 
-  if (value && !(value instanceof Array || typeof value === 'function')) {
+  if (value && !(value instanceof Array || typeof value === 'function' || value._foreignKeyField !== undefined)) {
     return value.save(options).then(function () {
       var foreignId =
         obj._meta.foreignKeyFor ?
@@ -236,6 +237,11 @@ function saveOneToMany(obj, field, options) {
     return Promise.all(items.map(function (item) {
       return item.save(options);
     }));
+  } else if (items && items._foreignKeyField !== undefined) {
+    if (items._foreignKeyField) {
+      items[items._foreignKeyField] = obj
+    }
+    return items.save()
   }
 }
 
@@ -378,6 +384,12 @@ var rowBase = function() {
       }
     },
 
+    setForeignKeyField: function (foreignKeyField) {
+      return Object.defineProperty(this, "_foreignKeyField", {
+        value: foreignKeyField
+      });
+    },
+
     insert: function () {
       return this.save({insert: true})
     },
@@ -420,6 +432,7 @@ exports.db = function(config) {
       function model(obj, options) {
         var saved = typeof options == 'object' && options.hasOwnProperty('saved')? options.saved: false;
         var modified = typeof options == 'object' && options.hasOwnProperty('modified')? options.modified: false;
+        var foreignKeyField = typeof options == 'object' && options.hasOwnProperty('foreignKeyField')? options.foreignKeyField: undefined;
         var row = _.extend(Object.create(modelPrototype), obj);
 
         if (saved) {
@@ -427,6 +440,10 @@ exports.db = function(config) {
           if (!modified) {
             row.setNotChanged();
           }
+        }
+
+        if (foreignKeyField !== undefined) {
+          row.setForeignKeyField(foreignKeyField)
         }
 
         return row;
