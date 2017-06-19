@@ -92,7 +92,12 @@ function graphify(definition, rows) {
             if (!array) {
               array = entity[field] = []
             }
-            array.push(foreignEntity)
+            var existing = array.find(function (item) {
+              return item.identity() === foreignEntity.identity()
+            })
+            if (!existing) {
+              array.push(foreignEntity)
+            }
           } else if (!entity[field]) {
             foreignEntity.setForeignKeyField(false)
             entity[field] = foreignEntity

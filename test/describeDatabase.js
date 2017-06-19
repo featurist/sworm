@@ -1413,6 +1413,7 @@ module.exports = function(name, config, database, otherTests) {
             var jane
             var jack
             var jessy
+            var smokey
             var miffy
 
             var somethingPlace = address({
@@ -1424,7 +1425,8 @@ module.exports = function(name, config, database, otherTests) {
                     address: address,
                     pets: function (owner) {
                       return [
-                        jessy = pet({name: 'jessy', owner: owner})
+                        jessy = pet({name: 'jessy', owner: owner}),
+                        smokey = pet({name: 'smokey', owner: owner})
                       ]
                     }
                   }),
@@ -1491,6 +1493,10 @@ module.exports = function(name, config, database, otherTests) {
                           {
                             id: jessy.id,
                             name: 'jessy'
+                          },
+                          {
+                            id: smokey.id,
+                            name: 'smokey'
                           }
                         ]
                       },
