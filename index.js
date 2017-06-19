@@ -110,11 +110,18 @@ function graphify(definition, rows) {
     }
   }
 
+  var results = []
+  var resultsSet = new Set()
+
   rows.forEach(function (row) {
-    loadEntity(row, map)
+    var entity = loadEntity(row, map)
+    if (!resultsSet.has(entity)) {
+      results.push(entity)
+      resultsSet.add(entity)
+    }
   })
 
-  return Object.values(map.identityMap)
+  return results
 }
 
 function insertStatement(obj, keys) {

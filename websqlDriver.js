@@ -31,7 +31,7 @@ module.exports = function() {
               }
 
               if (options.insert) {
-                r.id = result.insertId
+                r.id = params.hasOwnProperty(options.id) ? params[options.id] : result.insertId
               }
 
               fulfil(r)

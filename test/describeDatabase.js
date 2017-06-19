@@ -523,20 +523,34 @@ module.exports = function(name, config, database, otherTests) {
             var personExplicitId = db.model({
               table: "people_explicit_id"
             });
+            var miffy
 
             var p = personExplicitId({
-              id: 1,
-              name: "bob"
+              id: 4,
+              name: "bob",
+              pet: function (person) {
+                return [
+                  miffy = pet({name: 'miffy', owner: person})
+                ]
+              }
             });
 
             return p.save().then(function() {
               return db.query("select * from people_explicit_id").then(function(people) {
                 expect(database.clean(people)).to.eql([{
-                  id: 1,
+                  id: 4,
                   name: "bob"
                 }]);
               });
-            });
+            }).then(function () {
+              return db.query("select * from pets").then(function(pets) {
+                expect(database.clean(pets)).to.eql([{
+                  id: miffy.id,
+                  name: 'miffy',
+                  owner_id: 4
+                }]);
+              });
+            })
           });
         });
 

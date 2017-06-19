@@ -28,7 +28,7 @@ module.exports = function() {
       }).then(function (result) {
         if (options.insert || options.statement) {
           return {
-            id: result.insertId,
+            id: params.hasOwnProperty(options.id) ? params[options.id] : result.insertId,
             changes: result.affectedRows + result.changedRows
           }
         } else {

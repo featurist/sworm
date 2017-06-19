@@ -24,7 +24,10 @@ module.exports = function() {
             if (error) {
               reject(error);
             } else {
-              fulfil({id: this.lastID, changes: this.changes});
+              fulfil({
+                id: params.hasOwnProperty(options.id) ? params[options.id] : this.lastID,
+                changes: this.changes
+              });
             }
           });
         });
