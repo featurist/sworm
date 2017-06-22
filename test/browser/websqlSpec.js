@@ -12,6 +12,10 @@ var database = {
     return createTable("people",
       'create table if not exists people (id integer primary key, name varchar(50) NOT NULL, address_id integer NULL, photo blob null)'
     ).then(function() {
+      return createTable("pets",
+        'create table if not exists pets (id integer primary key, name varchar(50) NOT NULL, owner_id integer NULL)'
+      );
+    }).then(function() {
       return createTable("people_addresses",
         'create table if not exists people_addresses(address_id integer NOT NULL, person_id integer NOT NULL, rating integer NULL)'
       );

@@ -65,6 +65,10 @@ if (!process.env.TRAVIS) {
           'create table addresses(id number primary key, address varchar2(50) NOT NULL)'
         );
       }).then(function() {
+        return createTable("pets", "id",
+          'create table pets (id number primary key, name varchar2(50) NOT NULL, owner_id number NULL)'
+        );
+      }).then(function() {
         return createTable("people_weird_id", "weird_id",
           'create table people_weird_id(weird_id number primary key, name varchar2(50) NULL, address_weird_id int NULL)'
         );

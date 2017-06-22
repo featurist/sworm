@@ -14,6 +14,10 @@ var database = {
     return createTable("people",
       'CREATE TABLE [dbo].[people]([id] [int] IDENTITY(1,1) NOT NULL, [name] [nvarchar](50) NOT NULL, [address_id] [int] NULL, photo varbinary(10) null)'
     ).then(function() {
+      return createTable("pets",
+        'CREATE TABLE [dbo].[pets]([id] [int] IDENTITY(1,1) NOT NULL, [name] [nvarchar](50) NOT NULL, [owner_id] [int] NULL)'
+      );
+    }).then(function() {
       return createTable("people_addresses",
         'CREATE TABLE [dbo].[people_addresses]([address_id] [int] NOT NULL, [person_id] [int] NOT NULL, [rating] [int] NULL)'
       );
