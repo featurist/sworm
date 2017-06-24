@@ -86,22 +86,20 @@ function graphify(definition, rows) {
 
         var foreignEntity = loadEntity(row, foreign)
 
-        if (foreignEntity) {
-          if (foreign.isOneToMany) {
-            var array = entity[field]
-            if (!array) {
-              array = entity[field] = []
-            }
-            var existing = array.find(function (item) {
-              return item.identity() === foreignEntity.identity()
-            })
-            if (!existing) {
-              array.push(foreignEntity)
-            }
-          } else if (!entity[field]) {
-            foreignEntity.setForeignKeyField(false)
-            entity[field] = foreignEntity
+        if (foreign.isOneToMany) {
+          var array = entity[field]
+          if (!array) {
+            array = entity[field] = []
           }
+          var existing = array.find(function (item) {
+            return item.identity() === foreignEntity.identity()
+          })
+          if (foreignEntity && !existing) {
+            array.push(foreignEntity)
+          }
+        } else if (foreignEntity && !entity[field]) {
+          foreignEntity.setForeignKeyField(false)
+          entity[field] = foreignEntity
         }
       })
 

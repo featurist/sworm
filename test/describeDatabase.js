@@ -1490,7 +1490,7 @@ module.exports = function(name, config, database, otherTests) {
               var sql = 
                 'select ' +
                 'people.id as person_id, people.name as name, addresses.id as address_id, address, pets.id as pet_id, pets.name as pet_name ' +
-                'from people join addresses on people.address_id = addresses.id ' +
+                'from addresses left join people on people.address_id = addresses.id ' +
                 'left join pets on pets.owner_id = people.id ' +
                 'order by addresses.address, people.name, pets.name'
 
@@ -1516,7 +1516,8 @@ module.exports = function(name, config, database, otherTests) {
                       },
                       {
                         id: jane.id,
-                        name: 'jane'
+                        name: 'jane',
+                        pets: []
                       }
                     ]
                   },
@@ -1542,14 +1543,27 @@ module.exports = function(name, config, database, otherTests) {
           });
 
           it('can rebuild a graph with one to one relationships', function () {
-            var somethingPlace
-            var anotherPlace
-            var bob = person({name: 'bob', address: somethingPlace = address({address: '1 something place'})})
-            var mary = person({name: 'mary', address: anotherPlace = address({address: '2 another place'})})
+            var bob
+
+            var somethingPlace = address({
+              address: '1 something place',
+              people: function (address) {
+                return [
+                  bob = person({
+                    name: 'bob',
+                    address: address
+                  })
+                ]
+              }
+            })
+
+            var anotherPlace = address({
+              address: '2 another place'
+            })
 
             return Promise.all([
-              bob.save(),
-              mary.save()
+              somethingPlace.save(),
+              anotherPlace.save()
             ]).then(function () {
               var def = address({
                 id: 'address_id',
@@ -1563,7 +1577,7 @@ module.exports = function(name, config, database, otherTests) {
               return db.queryGraph(def,
                 'select ' +
                 'people.id as person_id, name, addresses.id as address_id, address ' +
-                'from people join addresses on people.address_id = addresses.id ' +
+                'from addresses left join people on people.address_id = addresses.id ' +
                 'order by addresses.address, people.name'
               ).then(function (results) {
                 expect(clone(results)).to.eql([
@@ -1577,11 +1591,7 @@ module.exports = function(name, config, database, otherTests) {
                   },
                   {
                     id: anotherPlace.id,
-                    address: '2 another place',
-                    people: {
-                      id: mary.id,
-                      name: 'mary'
-                    }
+                    address: '2 another place'
                   }
                 ]);
               })
