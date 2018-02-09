@@ -887,3 +887,6 @@ The only thing slightly awkward about this project are the test environments for
 Each database can be tested individually by running `mocha test/{mssql,mysql,postgres,oracle,sqlite}Spec.js`. All of them with simply `npm test`.
 
 Nevertheless, this project is almost entirely covered with tests and I expect any pull request to have tests that demonstrate any new feature or bugfix.
+
+## We're Hiring!
+Featurist provides full stack, feature driven development teams. Want to join us? Check out [our career opportunities](https://www.featurist.co.uk/careers/).
