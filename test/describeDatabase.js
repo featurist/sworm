@@ -10,9 +10,41 @@ require('es6-promise').polyfill();
 
 module.exports = function(name, config, database, otherTests) {
   describe(name, function() {
+    var driverModuleName;
+
+    if (database.driverModuleName instanceof Array) {
+      var modulesToDisable = database.driverModuleName.filter(function(moduleName) {
+        return moduleName !== process.env.DRIVER_MODULE;
+      });
+
+      before(function() {
+        return Promise.all(
+          modulesToDisable.map(function(moduleName) {
+            var modulePath = process.cwd() + "/node_modules/" + moduleName;
+            return fs.rename(modulePath, modulePath + ".disabled");
+          })
+        );
+      });
+      after(function() {
+        return Promise.all(
+          modulesToDisable.map(function(moduleName) {
+            var modulePath = process.cwd() + "/node_modules/" + moduleName;
+            return fs.rename(modulePath + ".disabled", modulePath);
+          })
+        );
+      });
+
+      driverModuleName = process.env.DRIVER_MODULE;
+    } else {
+      driverModuleName = database.driverModuleName;
+    }
+    describeDatabase(driverModuleName);
+  });
+
+  function describeDatabase (driverModuleName) {
     if (!database.noModule) {
-      describe("missing modules", function() {
-        var moduleName = __dirname + "/../node_modules/" + database.driverModuleName;
+      describe("missing module", function() {
+        var moduleName = __dirname + "/../node_modules/" + driverModuleName;
 
         beforeEach(function() {
           return fs.rename(moduleName, moduleName + ".missing");
@@ -25,7 +57,7 @@ module.exports = function(name, config, database, otherTests) {
         it("throws an exception if the driver module is not present", function() {
           return expect(function() {
             sworm.db(config).connect();
-          }).to.throw("npm install " + database.driverModuleName);
+          }).to.throw(driverModuleName);
         });
       });
     }
@@ -119,7 +151,7 @@ module.exports = function(name, config, database, otherTests) {
 
         it("can insert", function() {
           var p = person({
-              name: "bob"
+            name: "bob"
           });
           return p.save().then(function() {
             expect(p.id).to.exist;
@@ -158,7 +190,7 @@ module.exports = function(name, config, database, otherTests) {
             table: 'people'
           });
           var p = person({
-              name: "bob"
+            name: "bob"
           });
           return p.save().then(function() {
             expect(p.id).to.exist;
@@ -472,10 +504,10 @@ module.exports = function(name, config, database, otherTests) {
             return p.save().then(function() {
               return db.query("select * from people").then(function(people) {
                 expect(database.clean(people)).to.eql([{
-                    id: p.id,
-                    name: "jane",
-                    address_id: null,
-                    photo: null
+                  id: p.id,
+                  name: "jane",
+                  address_id: null,
+                  photo: null
                 }]);
               });
             });
@@ -664,9 +696,9 @@ module.exports = function(name, config, database, otherTests) {
 
           it("can update an entity with compound keys", function() {
             var pa = personAddress({
-                person_id: 12,
-                address_id: 34,
-                rating: 1
+              person_id: 12,
+              address_id: 34,
+              rating: 1
             });
 
             return pa.save().then(function() {
@@ -752,10 +784,10 @@ module.exports = function(name, config, database, otherTests) {
           return describe("model queries", function() {
             it("can pass parameters to a query", function() {
               return person({
-                  name: "bob"
+                name: "bob"
               }).save().then(function() {
                 return person({
-                    name: "jane"
+                  name: "jane"
                 }).save().then(function() {
                   return person.query("select name from people where name = @name", {
                     name: "jane"
@@ -805,10 +837,10 @@ module.exports = function(name, config, database, otherTests) {
         describe("foreign keys", function() {
           it("can save a many to one relationship", function() {
             var bob = person({
-                name: "bob",
-                address: address({
-                    address: "15, Rue d'Essert"
-                })
+              name: "bob",
+              address: address({
+                address: "15, Rue d'Essert"
+              })
             });
 
             return bob.save().then(function() {
@@ -847,9 +879,9 @@ module.exports = function(name, config, database, otherTests) {
           it("can save a many to one relationship with function that returns undefined", function() {
             var bobsAddress;
             var bob = person({
-                name: "bob",
-                address: function () {
-                }
+              name: "bob",
+              address: function () {
+              }
             });
 
             return bob.save().then(function() {
@@ -977,8 +1009,8 @@ module.exports = function(name, config, database, otherTests) {
 
               return db.query("select * from addresses").then(function(addresses) {
                 expect(database.clean(addresses)).to.eql([ {
-                    id: bob.address_id,
-                    address: "15, Rue d'Essert"
+                  id: bob.address_id,
+                  address: "15, Rue d'Essert"
                 } ]);
 
                 return db.query("select * from people order by name").then(function(people) {
@@ -1055,16 +1087,16 @@ module.exports = function(name, config, database, otherTests) {
             }
 
             var bob = person({
-                name: "bob"
+              name: "bob"
             });
             var jane = person({
-                name: "jane"
+              name: "jane"
             });
             var fremantle = address({
-                address: "Fremantle"
+              address: "Fremantle"
             });
             var essert = address({
-                address: "15 Rue d'Essert"
+              address: "15 Rue d'Essert"
             });
 
             livesIn(bob, fremantle);
@@ -1573,7 +1605,7 @@ module.exports = function(name, config, database, otherTests) {
                   name: 'name'
                 })
               })
-                
+
               return db.queryGraph(def,
                 'select ' +
                 'people.id as person_id, name, addresses.id as address_id, address ' +
@@ -1757,5 +1789,5 @@ module.exports = function(name, config, database, otherTests) {
         });
       });
     });
-  });
+  }
 };
