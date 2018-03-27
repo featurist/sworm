@@ -1,6 +1,6 @@
 {
   "name": "sworm",
-  "version": "3.7.1",
+  "version": "3.8.0",
   "description": "a lightweight write-only ORM for MSSQL, MySQL, PostgreSQL, Oracle, Sqlite 3",
   "main": "index.js",
   "dependencies": {
@@ -10,6 +10,7 @@
     "underscore": "1.8.3"
   },
   "devDependencies": {
+    "better-sqlite3": "^4.1.0",
     "chai": "4.0.2",
     "chai-as-promised": "7.0.0",
     "electron": "1.6.11",
@@ -26,13 +27,13 @@
     "sqlite3": "3.1.8"
   },
   "scripts": {
-    "test": "mocha && npm run test-websql",
+    "test": "npm run test-oracledb && npm run test-mysql && npm run test-postgres && npm run test-mssql && npm run test-sqlite && npm run test-websql",
     "test-websql": "electron-mocha --renderer test/browser",
     "test-oracledb": "mocha test/oracleSpec.js",
     "test-mysql": "mocha test/mysqlSpec.js",
     "test-postgres": "mocha test/postgresSpec.js",
     "test-mssql": "mocha test/mssqlSpec.js",
-    "test-sqlite": "mocha test/sqliteSpec.js"
+    "test-sqlite": "DRIVER_MODULE=sqlite3 mocha test/sqliteSpec.js && DRIVER_MODULE=better-sqlite3 mocha test/sqliteSpec.js"
   },
   "repository": {
     "type": "git",

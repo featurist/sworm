@@ -1,8 +1,12 @@
 language: node_js
 node_js:
-  - stable
+  - node
+cache:
+  directories:
+    - node_modules
 env:
-  - TRAVIS=true
+  global:
+    - TRAVIS=true
 services:
   - postgresql
   - mysql

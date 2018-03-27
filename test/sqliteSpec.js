@@ -41,7 +41,7 @@ var database = {
     return records;
   },
 
-  driverModuleName: "sqlite3"
+  driverModuleName: ["sqlite3", "better-sqlite3"]
 };
 
 var config = {
