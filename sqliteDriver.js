@@ -28,12 +28,22 @@ module.exports = function() {
 function betterSqliteInit(Database) {
   return {
     query: function(query, params, options) {
-      debug(query, params);
+      var sqliteParams = Object.keys(params).reduce(function(result, key) {
+        if (params[key] instanceof Date) {
+          result[key] = params[key].getTime()
+        } else {
+          result[key] = params[key]
+        }
+        return result
+      }, {})
+
+      debug(query, sqliteParams);
+
       if (options.statement || options.insert) {
         var statement = this.connection.prepare(query);
-        var res = statement.run(params);
+        var res = statement.run(sqliteParams);
         return Promise.resolve({
-          id: params.hasOwnProperty(options.id) ? params[options.id] : res.lastInsertROWID,
+          id: sqliteParams.hasOwnProperty(options.id) ? sqliteParams[options.id] : res.lastInsertROWID,
           changes: res.changes
         });
       } else if (options.exec || options.multiline) {
@@ -41,10 +51,10 @@ function betterSqliteInit(Database) {
       } else {
         var statement = this.connection.prepare(query);
         try {
-          return Promise.resolve(statement.all(params));
+          return Promise.resolve(statement.all(sqliteParams));
         } catch (e) {
           if (e.message === 'This statement does not return data. Use run() instead') {
-            return Promise.resolve(statement.run(params));
+            return Promise.resolve(statement.run(sqliteParams));
           }
           return Promise.reject(e);
         }
