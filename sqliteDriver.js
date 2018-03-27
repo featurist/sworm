@@ -31,6 +31,8 @@ function betterSqliteInit(Database) {
       var sqliteParams = Object.keys(params).reduce(function(result, key) {
         if (params[key] instanceof Date) {
           result[key] = params[key].getTime()
+        } else if (typeof params[key] === 'boolean') {
+          result[key] = params[key] ? 1 : 0
         } else {
           result[key] = params[key]
         }
