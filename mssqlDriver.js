@@ -37,7 +37,7 @@ module.exports = function() {
 
     connect: function(config) {
       var self = this;
-      self.connection = new sql.Connection(config.config);
+      self.connection = new sql.ConnectionPool(config.config);
 
       return promisify(function(cb) {
         return self.connection.connect(cb);
