@@ -37,6 +37,10 @@ module.exports = function() {
 
     connect: function(config) {
       var self = this;
+      config.config.server = config.config.host;
+      config.config.options = {
+        encrypt: true
+      }
       self.connection = new sql.ConnectionPool(config.config);
 
       return promisify(function(cb) {
