@@ -25,7 +25,7 @@ module.exports = function() {
           }
 
           if (options.insert) {
-            r.id = params.hasOwnProperty(options.id) ? params[options.id] : result[0][options.id]
+            r.id = params.hasOwnProperty(options.id) ? params[options.id] : result.recordset[0][options.id]
           }
 
           return r
