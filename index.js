@@ -311,8 +311,9 @@ var rowBase = function() {
         })
 
         self.setSaving(saving)
-        oneToManyPromises.push(saving)
-      }
+     }
+
+      oneToManyPromises.push(self._saving)
 
       function waitForPromises () {
         if (oneToManyPromises.length) {
