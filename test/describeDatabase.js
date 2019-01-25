@@ -368,6 +368,16 @@ module.exports = function(name, config, database, otherTests) {
               }));
             });
           });
+
+          it("can call save twice on the same object", function() {
+            var p = person({ name: 'Person' });
+            p.save()
+            return p.save().then(function () {
+              return p;
+            }).then(function (people) {
+              expect(people.saved()).to.equal(true)
+            });
+          });
         });
 
         describe("strings", function() {
