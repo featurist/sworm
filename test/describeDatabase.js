@@ -137,7 +137,7 @@ module.exports = function(name, config, database, otherTests) {
 
         describe('binary', function () {
           it('can store binary', function () {
-            var photo = new Buffer('♥︎');
+            var photo = new Buffer.from('♥︎');
 
             var bob = person({
               name: 'bob',

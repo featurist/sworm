@@ -84,6 +84,17 @@ var swormConfig = config('sworm')
 
 if (!process.env.TRAVIS) {
   describeDatabase("mssql", swormConfig, database, function () {
+    describe('connection', function () {
+      it('can connect with URL', function () {
+        var c = swormConfig.config
+        var url = 'mssql://' + c.user + ':' + c.password + '@' + c.server + '/' + c.database
+        var db = sworm.db(url);
+        return db.query('select * from people').then(function (rows) {
+          expect(rows).to.eql([]);
+        });
+      })
+    })
+
     describe('generatedId', function () {
       it('can insert row with uniqueidentifier and get id correctly', function () {
         var db = sworm.db(swormConfig)
