@@ -697,7 +697,8 @@ function configFromUrl(url) {
   var protocol = parsedUrl.protocol? parsedUrl.protocol.replace(/:$/, ''): (isBrowser? 'websql': 'sqlite')
   var driver = {
     postgres: 'pg',
-    file: 'sqlite'
+    file: 'sqlite',
+    mssql: 'mssql'
   }[protocol] || protocol
 
   return {

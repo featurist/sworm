@@ -7,6 +7,7 @@ services:
       - "1521:1521"
   mysql:
     image: mysql
+    command: mysqld --default-authentication-plugin=mysql_native_password
     ports:
       - "3306:3306"
     environment:
@@ -17,3 +18,10 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_PASSWORD=password
+  mssql:
+    image: microsoft/mssql-server-linux
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=PassWord123
