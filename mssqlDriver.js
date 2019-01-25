@@ -21,7 +21,7 @@ module.exports = function() {
           var r = {}
 
           if (options.statement) {
-            r.changes = request.rowsAffected
+            r.changes = result.rowsAffected[0]
           }
 
           if (options.insert) {
@@ -30,14 +30,13 @@ module.exports = function() {
 
           return r
         } else {
-          return result
+          return result.recordset
         }
       })
     },
 
     connect: function(config) {
       var self = this;
-      config.config.server = config.config.host;
       config.config.options = {
         encrypt: true
       }
