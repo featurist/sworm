@@ -5,12 +5,15 @@ var expect = require('chai').expect
 var database = {
   createDatabase: function() {
     var db = sworm.db(config());
+    function close () {
+      return db.close()
+    }
     return db.query(
       "If(db_id(N'sworm') IS NULL)\n" +
       "begin\n" +
       "create database sworm\n" +
       "end"
-     );
+    ).then(close, close);
   },
 
   createTables: function(db, tables) {
@@ -85,10 +88,16 @@ var swormConfig = config('sworm')
 if (!process.env.TRAVIS) {
   describeDatabase("mssql", swormConfig, database, function () {
     describe('connection', function () {
+      var db
+
+      afterEach(function () {
+        return db.close()
+      })
+
       it('can connect with URL', function () {
         var c = swormConfig.config
         var url = 'mssql://' + c.user + ':' + c.password + '@' + c.server + '/' + c.database
-        var db = sworm.db(url);
+        db = sworm.db(url);
         return db.query('select * from people').then(function (rows) {
           expect(rows).to.eql([]);
         });
@@ -96,8 +105,14 @@ if (!process.env.TRAVIS) {
     })
 
     describe('generatedId', function () {
+      var db
+
+      afterEach(function () {
+        return db.close()
+      })
+
       it('can insert row with uniqueidentifier and get id correctly', function () {
-        var db = sworm.db(swormConfig)
+        db = sworm.db(swormConfig)
         var person = db.model({table: 'people_uuid', generatedId: 'output'});
 
         var bob = person({name: 'bob'})
@@ -109,7 +124,7 @@ if (!process.env.TRAVIS) {
       })
 
       it('can insert empty row with uniqueidentifier and get id correctly', function () {
-        var db = sworm.db(swormConfig)
+        db = sworm.db(swormConfig)
         var person = db.model({table: 'people_uuid', generatedId: 'output'});
 
         var bob = person({})

@@ -49,7 +49,10 @@ module.exports = function(name, config, database, otherTests) {
 
         before(function() {
           var schema = sworm.db(config);
-          return database.createTables(schema, tables);
+          function close () {
+            return schema.close()
+          }
+          return database.createTables(schema, tables).then(close, close)
         });
 
         function clearTables() {
@@ -152,27 +155,38 @@ module.exports = function(name, config, database, otherTests) {
           });
         });
 
-        it("can insert without connecting", function() {
-          var db = sworm.db(config);
-          var person = db.model({
-            table: 'people'
-          });
-          var p = person({
-              name: "bob"
-          });
-          return p.save().then(function() {
-            expect(p.id).to.exist;
+        context('without connecting', function () {
+          var db
 
-            return db.query("select * from people").then(function(people) {
-              return expect(database.clean(people)).to.eql([{
-                id: p.id,
-                name: "bob",
-                address_id: null,
-                photo: null
-              }]);
+          beforeEach(function () {
+            db = sworm.db(config);
+          })
+
+          afterEach(function () {
+            return db.close()
+          })
+
+          it("can insert", function() {
+            var person = db.model({
+              table: 'people'
+            });
+            var p = person({
+                name: "bob"
+            });
+            return p.save().then(function() {
+              expect(p.id).to.exist;
+
+              return db.query("select * from people").then(function(people) {
+                return expect(database.clean(people)).to.eql([{
+                  id: p.id,
+                  name: "bob",
+                  address_id: null,
+                  photo: null
+                }]);
+              });
             });
           });
-        });
+        })
 
         it('can run a function then disconnect', function () {
           var db = sworm.db(config);
@@ -1727,10 +1741,16 @@ module.exports = function(name, config, database, otherTests) {
           return db.statement('delete from people');
         }
 
-        it("can define models before connecting to database", function() {
-          var schema = sworm.db();
+        var db
 
-          var personModel = schema.model({
+        afterEach(function () {
+          return db.close()
+        })
+
+        it("can define models before connecting to database", function() {
+          db = sworm.db();
+
+          var personModel = db.model({
             table: "people"
           });
 
@@ -1738,11 +1758,11 @@ module.exports = function(name, config, database, otherTests) {
             name: "bob"
           });
 
-          return schema.connect(config).then(function() {
-            return clear(schema)
+          return db.connect(config).then(function() {
+            return clear(db)
           }).then(function () {
             return bob.save().then(function() {
-              return schema.query("select * from people").then(function(people) {
+              return db.query("select * from people").then(function(people) {
                 expect(people.map(function (p) {
                   return p.name;
                 })).to.eql(['bob']);
@@ -1754,7 +1774,7 @@ module.exports = function(name, config, database, otherTests) {
         it('can setup the session after connection', function () {
           this.timeout(5000);
           var statements = [];
-          var db = sworm.db(_.extend(config, {setupSession: function (db) {
+          db = sworm.db(_.extend(config, {setupSession: function (db) {
             return db.query('select * from people_addresses');
           }}));
           db.log = function (query) {

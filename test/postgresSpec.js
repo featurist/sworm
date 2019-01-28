@@ -40,6 +40,11 @@ function config(name, extras) {
 var database = {
   createDatabase: function() {
     var db = sworm.db(urlConfig('postgres'));
+
+    function close () {
+      return db.close()
+    }
+
     return db.query('select * from pg_database where datname = @name', {name: 'sworm'}).then(function (rows) {
       if (rows.length) {
         return db.query('drop database sworm').then(function () {
@@ -48,7 +53,7 @@ var database = {
       } else {
         return db.query('create database sworm');
       }
-    });
+    }).then(close, close)
   },
 
   createTables: function(db, tables) {

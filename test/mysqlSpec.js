@@ -13,7 +13,10 @@ function config(name) {
 var database = {
   createDatabase: function() {
     var db = sworm.db(config());
-    return db.query('create database if not exists sworm');
+    function close () {
+      return db.close()
+    }
+    return db.query('create database if not exists sworm').then(close, close)
   },
 
   createTables: function(db, tables) {
