@@ -4,7 +4,7 @@
   "description": "a lightweight write-only ORM for MSSQL, MySQL, PostgreSQL, Oracle, Sqlite 3",
   "main": "index.js",
   "dependencies": {
-    "cooperative": "1.1.0",
+    "cooperative": "1.1.1",
     "debug": "^4.1.1",
     "randomstring": "1.1.5",
     "underscore": "^1.9.1"
